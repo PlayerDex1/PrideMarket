@@ -38,23 +38,32 @@ const CustomTooltip = ({ active, payload, label }: any) => {
     );
 };
 
+type TimeFilter = '24h' | '7d' | '30d';
+
 export default function Analytics() {
     const [items, setItems] = useState<MarketItem[]>([]);
     const [loading, setLoading] = useState(true);
     const [lastRefresh, setLastRefresh] = useState<Date | null>(null);
+    const [timeFilter, setTimeFilter] = useState<TimeFilter>('24h');
 
     const fetchAll = useCallback(async () => {
         setLoading(true);
+        const days = timeFilter === '24h' ? 1 : timeFilter === '7d' ? 7 : 30;
+        const fromDate = new Date();
+        fromDate.setDate(fromDate.getDate() - days);
+
         const { data } = await supabase
             .from('market_items')
             .select('id, name, price, currency, timestamp')
             .eq('server_id', SERVER_ID)
+            .gte('timestamp', fromDate.toISOString())
             .order('timestamp', { ascending: false })
-            .limit(1000);
+            .limit(10000);
+
         if (data) setItems(data);
         setLoading(false);
         setLastRefresh(new Date());
-    }, []);
+    }, [timeFilter]);
 
     useEffect(() => { fetchAll(); }, [fetchAll]);
 
@@ -77,17 +86,33 @@ export default function Analytics() {
             .map(([name, v]) => ({ name, count: v.count, avg: Math.round(v.prices.reduce((a, b) => a + b, 0) / v.prices.length) }))
             .sort((a, b) => b.count - a.count).slice(0, 10);
 
-        const byHour: Record<number, number> = {};
-        for (let h = 0; h < 24; h++) byHour[h] = 0;
-        items.forEach(i => {
-            const itemDate = new Date(i.timestamp);
-            if (now.getTime() - itemDate.getTime() <= 24 * 60 * 60 * 1000) byHour[itemDate.getHours()]++;
-        });
-        const currentHour = now.getHours();
-        const hourData = Array.from({ length: 24 }, (_, i) => {
-            const h = (currentHour - 23 + i + 24) % 24;
-            return { hour: `${h}h`, count: byHour[h] };
-        });
+        const byTime: Record<string, number> = {};
+        let timeData: { time: string; count: number }[] = [];
+
+        if (timeFilter === '24h') {
+            for (let h = 0; h < 24; h++) byTime[h] = 0;
+            items.forEach(i => {
+                const itemDate = new Date(i.timestamp);
+                if (now.getTime() - itemDate.getTime() <= 24 * 60 * 60 * 1000) byTime[itemDate.getHours()]++;
+            });
+            const currentHour = now.getHours();
+            timeData = Array.from({ length: 24 }, (_, i) => {
+                const h = (currentHour - 23 + i + 24) % 24;
+                return { time: `${h}h`, count: byTime[h] };
+            });
+        } else {
+            const days = timeFilter === '7d' ? 7 : 30;
+            for (let d = days - 1; d >= 0; d--) {
+                const dDate = new Date(now);
+                dDate.setDate(dDate.getDate() - d);
+                byTime[dDate.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })] = 0;
+            }
+            items.forEach(i => {
+                const dateStr = new Date(i.timestamp).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+                if (byTime[dateStr] !== undefined) byTime[dateStr]++;
+            });
+            timeData = Object.entries(byTime).map(([time, count]) => ({ time, count }));
+        }
 
         const mostExpensive = [...items].sort((a, b) => b.price - a.price).slice(0, 8);
         const cheapest = [...items].sort((a, b) => a.price - b.price).slice(0, 8);
@@ -99,7 +124,7 @@ export default function Analytics() {
             avgPrice: totalVolume / items.length,
             totalVolume,
             topItems,
-            hourData,
+            timeData,
             mostExpensive,
             cheapest,
         };
@@ -153,7 +178,21 @@ export default function Analytics() {
                         Visão detalhada do mercado <strong style={{ color: 'var(--text-primary)' }}>{SERVER_NAME}</strong> · {stats.totalItems} amostras
                     </p>
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                    <div style={{ display: 'flex', background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: 9, padding: 2 }}>
+                        {(['24h', '7d', '30d'] as TimeFilter[]).map(f => (
+                            <button key={f}
+                                onClick={() => setTimeFilter(f)}
+                                style={{
+                                    padding: '5px 12px', fontSize: 11, fontWeight: 600, borderRadius: 7, border: 'none', cursor: 'pointer',
+                                    background: timeFilter === f ? 'var(--accent-dim)' : 'transparent',
+                                    color: timeFilter === f ? 'var(--accent)' : 'var(--text-muted)',
+                                    transition: 'all 0.15s'
+                                }}>
+                                {f.toUpperCase()}
+                            </button>
+                        ))}
+                    </div>
                     {lastRefresh && (
                         <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>
                             {lastRefresh.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
@@ -199,11 +238,11 @@ export default function Analytics() {
                 {/* Activity chart */}
                 <div className="glass-card" style={{ padding: 22 }}>
                     <div style={{ marginBottom: 20 }}>
-                        <h2 style={{ margin: 0, fontSize: 14, fontWeight: 700, color: 'var(--text-primary)' }}>Atividade por Hora (24h)</h2>
-                        <p style={{ margin: '4px 0 0', fontSize: 11, color: 'var(--text-muted)' }}>Volume de anúncios postados por hora</p>
+                        <h2 style={{ margin: 0, fontSize: 14, fontWeight: 700, color: 'var(--text-primary)' }}>Atividade ao Longo do Tempo</h2>
+                        <p style={{ margin: '4px 0 0', fontSize: 11, color: 'var(--text-muted)' }}>Volume de anúncios postados ({timeFilter.toUpperCase()})</p>
                     </div>
                     <ResponsiveContainer width="100%" height={220}>
-                        <AreaChart data={stats.hourData} margin={{ left: -20, right: 8, top: 8, bottom: 0 }}>
+                        <AreaChart data={stats.timeData} margin={{ left: -20, right: 8, top: 8, bottom: 0 }}>
                             <defs>
                                 <linearGradient id="gradActivity" x1="0" y1="0" x2="0" y2="1">
                                     <stop offset="5%" stopColor="#e63946" stopOpacity={0.35} />
@@ -211,7 +250,7 @@ export default function Analytics() {
                                 </linearGradient>
                             </defs>
                             <CartesianGrid strokeDasharray="3 3" stroke="#1a1a2a" vertical={false} />
-                            <XAxis dataKey="hour" tick={{ fill: '#4a4a66', fontSize: 10 }} tickLine={false} axisLine={false} interval={3} />
+                            <XAxis dataKey="time" tick={{ fill: '#4a4a66', fontSize: 10 }} tickLine={false} axisLine={false} interval={timeFilter === '30d' ? 4 : 2} />
                             <YAxis tick={{ fill: '#4a4a66', fontSize: 10 }} tickLine={false} axisLine={false} />
                             <RechartsTooltip content={<CustomTooltip />} />
                             <Area type="monotone" dataKey="count" stroke="#e63946" strokeWidth={2.5} fillOpacity={1} fill="url(#gradActivity)" dot={false} activeDot={{ r: 4, fill: '#e63946', strokeWidth: 0 }} />
