@@ -45,8 +45,8 @@ export default function Layout() {
                     >
                         {/* Logo */}
                         <div className="flex items-center justify-between mb-8">
-                            <Link to="/" className="flex items-center gap-2.5" onClick={() => setMobileNavOpen(false)}>
-                                <img src="/logo.png" alt="PrideMarket" style={{ height: 36, objectFit: 'contain' }} />
+                            <Link to="/" className="flex items-center gap-2.5 logo-container" onClick={() => setMobileNavOpen(false)}>
+                                <img src="/logo.png" alt="PrideMarket" style={{ height: 38, objectFit: 'contain' }} />
                             </Link>
                             <button onClick={() => setMobileNavOpen(false)} style={{ color: 'var(--text-muted)' }}>
                                 <X size={18} />
@@ -94,8 +94,8 @@ export default function Layout() {
                     </button>
 
                     {/* Logo */}
-                    <Link to="/" className="flex items-center gap-2.5 shrink-0">
-                        <img src="/logo.png" alt="PrideMarket" style={{ height: 33, objectFit: 'contain' }} />
+                    <Link to="/" className="flex items-center gap-2.5 shrink-0 logo-container">
+                        <img src="/logo.png" alt="PrideMarket" style={{ height: 36, objectFit: 'contain' }} />
                     </Link>
 
                     {/* Search bar CMD+K */}
