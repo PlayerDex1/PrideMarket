@@ -37,8 +37,8 @@ function formatTime(iso: string) {
     return new Date(iso).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
 }
 
-const CURRENCIES = ['all', 'pride coin', 'adena'];
-const CURRENCY_LABELS: Record<string, string> = { all: 'Todas', 'pride coin': 'Pride Coin', adena: 'Adena' };
+const CURRENCIES = ['all', 'pride coin'];
+const CURRENCY_LABELS: Record<string, string> = { all: 'Todas', 'pride coin': 'Pride Coin' };
 
 export default function MarketHome() {
     const navigate = useNavigate();
@@ -103,9 +103,7 @@ export default function MarketHome() {
             const matchSearch = i.name.toLowerCase().includes(search.toLowerCase());
             const matchCurrency = currencyFilter === 'all'
                 ? true
-                : currencyFilter === 'adena'
-                    ? i.currency.toLowerCase().includes('adena')
-                    : i.currency.toLowerCase() === currencyFilter;
+                : i.currency.toLowerCase() === currencyFilter;
             return matchSearch && matchCurrency;
         })
         .sort((a, b) => {
