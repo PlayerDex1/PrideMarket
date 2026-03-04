@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { BarChart2, TrendingUp, TrendingDown, Clock, Activity, Package, DollarSign, Layers, RefreshCw } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, AreaChart, Area } from 'recharts';
 import { supabase } from '../lib/supabase';
+import { formatCurrency } from '../lib/format';
 
 const SERVER_ID = 'pride';
 const SERVER_NAME = 'Pride';
@@ -273,9 +274,9 @@ export default function Analytics() {
                                     </div>
                                     <div style={{ textAlign: 'right', marginLeft: 12, flexShrink: 0 }}>
                                         <span style={{ fontWeight: 800, fontSize: 12, color: section.priceColor, display: 'block' }}>
-                                            {item.price.toLocaleString('pt-BR', { maximumFractionDigits: 3 })}
+                                            {formatCurrency(item.price, item.currency)}
                                         </span>
-                                        <span style={{ fontSize: 9, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>{CURRENCY}</span>
+                                        <span style={{ fontSize: 9, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>{item.currency || CURRENCY}</span>
                                     </div>
                                 </div>
                             ))}

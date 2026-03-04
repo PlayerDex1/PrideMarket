@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { useNavigate } from 'react-router-dom';
 import { Search, Clock, ArrowUpDown, Zap, TrendingUp, ChevronRight, Activity, Package, X } from 'lucide-react';
 import { supabase } from '../lib/supabase';
+import { formatCurrency, formatCompactPrice } from '../lib/format';
 
 const SERVER_ID = 'pride';
 const POLL_INTERVAL = 5000;
@@ -35,12 +36,8 @@ function isNew(ts: string) {
 function formatTime(iso: string) {
     return new Date(iso).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
 }
-
-function formatPrice(price: number) {
-    if (price >= 1_000_000_000) return `${(price / 1_000_000_000).toLocaleString('en-US', { minimumFractionDigits: 3, maximumFractionDigits: 3 })}B`;
-    if (price >= 1_000_000) return `${(price / 1_000_000).toLocaleString('en-US', { minimumFractionDigits: 3, maximumFractionDigits: 3 })}M`;
-    if (price >= 1_000) return `${(price / 1_000).toLocaleString('en-US', { minimumFractionDigits: 3, maximumFractionDigits: 3 })}K`;
-    return price.toLocaleString('en-US', { minimumFractionDigits: 3, maximumFractionDigits: 3 });
+function formatTime(iso: string) {
+    return new Date(iso).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
 }
 
 const CURRENCIES = ['all', 'pride coin', 'adena'];
@@ -105,7 +102,15 @@ export default function MarketHome() {
     const uniqueItems = useMemo(() => new Set(items.map(i => normalizeItemName(i.name))).size, [items]);
 
     const sorted = [...items]
-        .filter(i => i.name.toLowerCase().includes(search.toLowerCase()) && (currencyFilter === 'all' || i.currency.toLowerCase() === currencyFilter))
+        .filter(i => {
+            const matchSearch = i.name.toLowerCase().includes(search.toLowerCase());
+            const matchCurrency = currencyFilter === 'all'
+                ? true
+                : currencyFilter === 'adena'
+                    ? i.currency.toLowerCase().includes('adena')
+                    : i.currency.toLowerCase() === currencyFilter;
+            return matchSearch && matchCurrency;
+        })
         .sort((a, b) => {
             const av = (a as any)[sortConfig.key], bv = (b as any)[sortConfig.key];
             return sortConfig.direction === 'asc' ? (av < bv ? -1 : 1) : (av > bv ? -1 : 1);
@@ -163,7 +168,7 @@ export default function MarketHome() {
                         },
                         {
                             label: 'Preço médio',
-                            value: loading ? '—' : `${formatPrice(avgPrice)} PC`,
+                            value: loading ? '—' : `${formatCompactPrice(avgPrice, 'PC')} PC`,
                             icon: TrendingUp, color: 'var(--gold)',
                             bg: 'rgba(244,162,97,0.08)', border: 'rgba(244,162,97,0.18)',
                         },
@@ -312,7 +317,7 @@ export default function MarketHome() {
                                         <td style={{ padding: '10px 16px' }}>
                                             <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                                                 <span style={{ fontWeight: 700, fontSize: 13, color: 'var(--gold)' }}>
-                                                    {item.price.toLocaleString('en-US', { minimumFractionDigits: 3, maximumFractionDigits: 3 })}
+                                                    {formatCurrency(item.price, item.currency)}
                                                     <span style={{ fontSize: 10, fontWeight: 500, color: 'var(--text-secondary)', marginLeft: 4 }}>{item.currency}</span>
                                                 </span>
                                                 {extractQuantity(item.name) > 1 && (() => {
@@ -320,7 +325,7 @@ export default function MarketHome() {
                                                     const unitPrice = item.price / qty;
                                                     return (
                                                         <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>
-                                                            {qty.toLocaleString()}x · {unitPrice.toLocaleString('en-US', { minimumFractionDigits: 3, maximumFractionDigits: 3 })} {item.currency}/un
+                                                            {qty.toLocaleString()}x · {formatCurrency(unitPrice, item.currency)} {item.currency}/un
                                                         </span>
                                                     );
                                                 })()}
@@ -401,7 +406,7 @@ export default function MarketHome() {
                                         {cleanItemName(item.name)}
                                     </p>
                                     <p style={{ margin: 0, fontSize: 10, color: 'var(--text-muted)', marginTop: 1 }}>
-                                        {item.count}x · mín {item.minPrice.toLocaleString('en-US', { minimumFractionDigits: 3, maximumFractionDigits: 3 })} PC
+                                        {item.count}x · mín {formatCurrency(item.minPrice, 'PC')} PC
                                     </p>
                                 </div>
 

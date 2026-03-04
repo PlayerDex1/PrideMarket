@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Clock, TrendingDown, TrendingUp, BarChart2, Sword } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine } from 'recharts';
 import { supabase } from '../lib/supabase';
+import { formatCurrency } from '../lib/format';
 
 const CURRENCY = 'Pride Coin';
 
@@ -33,8 +34,8 @@ const CustomTooltip = ({ active, payload, label }: any) => {
         }}>
             <p style={{ color: '#8888aa', margin: '0 0 5px', fontSize: 11 }}>{label}</p>
             <p style={{ color: '#f4a261', margin: 0, fontWeight: 700, fontSize: 14 }}>
-                {Number(payload[0].value).toLocaleString('en-US', { minimumFractionDigits: 3, maximumFractionDigits: 3 })}
-                <span style={{ color: '#4a4a66', fontWeight: 400, fontSize: 10, marginLeft: 4 }}>{CURRENCY}</span>
+                {formatCurrency(Number(payload[0].value), payload[0].payload.currency || CURRENCY)}
+                <span style={{ color: '#4a4a66', fontWeight: 400, fontSize: 10, marginLeft: 4 }}>{payload[0].payload.currency || CURRENCY}</span>
             </p>
         </div>
     );
@@ -76,7 +77,7 @@ export default function ItemDetail() {
     const lastPrice = prices.length ? prices[prices.length - 1] : 0;
     const priceChange = prices.length > 1 ? ((lastPrice - prices[0]) / prices[0]) * 100 : 0;
 
-    const chartData = history.map(h => ({ time: formatTimeShort(h.timestamp), price: h.price, name: h.name }));
+    const chartData = history.map(h => ({ time: formatTimeShort(h.timestamp), price: h.price, name: h.name, currency: h.currency }));
     const firstIcon = history.find(h => h.iconUrl)?.iconUrl || '';
 
     return (
@@ -151,7 +152,7 @@ export default function ItemDetail() {
                     <div style={{ textAlign: 'right', flexShrink: 0 }}>
                         <p style={{ margin: 0, fontSize: 11, color: 'var(--text-muted)', marginBottom: 4 }}>Último preço</p>
                         <p style={{ margin: 0, fontSize: 24, fontWeight: 800, color: 'var(--gold)', letterSpacing: '-0.5px' }}>
-                            {lastPrice.toLocaleString('en-US', { minimumFractionDigits: 3, maximumFractionDigits: 3 })}
+                            {formatCurrency(lastPrice, history[history.length - 1]?.currency || CURRENCY)}
                         </p>
                         <p style={{ margin: 0, fontSize: 10, color: 'var(--text-muted)' }}>{CURRENCY}</p>
                     </div>
@@ -172,7 +173,7 @@ export default function ItemDetail() {
                         </div>
                         <p style={{ margin: 0, fontSize: 11, color: 'var(--text-secondary)' }}>{s.label}</p>
                         <p style={{ margin: '5px 0 0', fontSize: 15, fontWeight: 800, color: 'var(--text-primary)', letterSpacing: '-0.3px' }}>
-                            {s.raw ?? `${s.value!.toLocaleString('en-US', { minimumFractionDigits: 3, maximumFractionDigits: 3 })} PC`}
+                            {s.raw ?? `${formatCurrency(s.value!, history[0]?.currency || CURRENCY)} ${history[0]?.currency || CURRENCY}`}
                         </p>
                     </div>
                 ))}
@@ -255,11 +256,11 @@ export default function ItemDetail() {
                                     <td style={{ padding: '10px 16px' }}>
                                         <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                                             <span style={{ fontWeight: 700, color: 'var(--gold)' }}>
-                                                {item.price.toLocaleString('en-US', { minimumFractionDigits: 3, maximumFractionDigits: 3 })} {CURRENCY}
+                                                {formatCurrency(item.price, item.currency)} {item.currency}
                                             </span>
                                             {extractQuantity(item.name) > 1 && (
                                                 <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>
-                                                    {extractQuantity(item.name).toLocaleString()}x · {(item.price / extractQuantity(item.name)).toLocaleString('en-US', { minimumFractionDigits: 3, maximumFractionDigits: 3 })} {CURRENCY}/un
+                                                    {extractQuantity(item.name).toLocaleString()}x · {formatCurrency(item.price / extractQuantity(item.name), item.currency)} {item.currency}/un
                                                 </span>
                                             )}
                                         </div>

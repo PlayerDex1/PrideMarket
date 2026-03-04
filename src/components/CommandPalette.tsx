@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Search, Clock, X, TrendingUp, Package } from 'lucide-react';
 import { supabase } from '../lib/supabase';
+import { formatCurrency } from '../lib/format';
 
 interface Result {
     name: string;
@@ -204,7 +205,7 @@ export default function CommandPalette({ open, onClose }: CommandPaletteProps) {
                                             overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                                         }}>{cleanItemName(r.name)}</p>
                                         <p style={{ margin: '2px 0 0', fontSize: 11, color: 'var(--text-muted)' }}>
-                                            {r.price.toLocaleString('en-US', { minimumFractionDigits: 3, maximumFractionDigits: 3 })} {r.currency}
+                                            {formatCurrency(r.price, r.currency)} {r.currency}
                                         </p>
                                     </div>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 10, color: 'var(--text-muted)', flexShrink: 0 }}>
