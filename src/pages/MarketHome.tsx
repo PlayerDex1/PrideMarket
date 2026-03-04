@@ -36,9 +36,6 @@ function isNew(ts: string) {
 function formatTime(iso: string) {
     return new Date(iso).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
 }
-function formatTime(iso: string) {
-    return new Date(iso).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-}
 
 const CURRENCIES = ['all', 'pride coin', 'adena'];
 const CURRENCY_LABELS: Record<string, string> = { all: 'Todas', 'pride coin': 'Pride Coin', adena: 'Adena' };
