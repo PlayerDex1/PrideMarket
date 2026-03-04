@@ -161,16 +161,31 @@ export default function Layout() {
             {/* Footer */}
             <footer style={{
                 borderTop: '1px solid var(--border)',
-                padding: '18px 20px',
+                padding: '24px 20px',
                 textAlign: 'center',
                 fontSize: 12,
                 color: 'var(--text-muted)',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 12,
+                alignItems: 'center'
             }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
                     <Activity size={12} style={{ color: 'var(--accent)' }} />
                     PrideMarket — Lineage 2 Real-time Market Tracker
                     <span style={{ color: 'var(--border-bright)' }}>·</span>
                     <span>Dados atualizados a cada 5s</span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 16, fontSize: 13 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <span style={{ color: 'var(--text-secondary)' }}>Created by:</span>
+                        <strong style={{ color: 'var(--text-primary)', fontWeight: 600 }}>Holdboy</strong>
+                    </div>
+                    <span style={{ color: 'var(--border-bright)' }}>|</span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <span style={{ color: 'var(--text-secondary)' }}>Discord:</span>
+                        <span style={{ color: '#5865F2', fontWeight: 600, letterSpacing: '0.3px' }}>@Holdboy</span>
+                    </div>
                 </div>
             </footer>
         </div>
