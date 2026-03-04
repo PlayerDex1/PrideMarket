@@ -1,20 +1,49 @@
 <!doctype html>
 <html lang="pt-BR">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" content="PrideMarket — Acompanhe preços, tendências e oportunidades do mercado do servidor Pride em tempo real." />
-    <meta name="theme-color" content="#050508" />
-    <meta property="og:title" content="PrideMarket — Lineage 2" />
-    <meta property="og:description" content="Monitore o mercado do Pride em tempo real. Histórico de preços, analytics e ranking de itens." />
-    <meta property="og:type" content="website" />
-    <title>PrideMarket — Lineage 2 Market Tracker</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
-  </head>
-  <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
-  </body>
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description"
+    content="PrideMarket — Acompanhe preços, tendências e oportunidades do mercado do servidor Pride em tempo real." />
+  <meta name="theme-color" content="#050508" />
+  <meta property="og:title" content="PrideMarket — Lineage 2" />
+  <meta property="og:description"
+    content="Monitore o mercado do Pride em tempo real. Histórico de preços, analytics e ranking de itens." />
+  <meta property="og:type" content="website" />
+  <title>PrideMarket — Lineage 2 Market Tracker</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap"
+    rel="stylesheet" />
+</head>
+
+<body>
+  <!-- Script Anti-DevTools (Dificulta Botão Direito e F12) -->
+  <script>
+    document.addEventListener('contextmenu', event => event.preventDefault());
+
+    window.addEventListener('keydown', function (e) {
+      // Bloqueia F12
+      if (e.key === 'F12') {
+        e.preventDefault();
+      }
+      // Bloqueia Ctrl+Shift+I (Abre Ferramentas de Dev) / Cmd+Option+I (Mac)
+      if ((e.ctrlKey && e.shiftKey && e.key === 'I') || (e.ctrlKey && e.shiftKey && e.key === 'i') || (e.metaKey && e.altKey && e.key === 'I') || (e.metaKey && e.altKey && e.key === 'i')) {
+        e.preventDefault();
+      }
+      // Bloqueia Ctrl+Shift+J (Abre Console) / Cmd+Option+J (Mac)
+      if ((e.ctrlKey && e.shiftKey && e.key === 'J') || (e.ctrlKey && e.shiftKey && e.key === 'j') || (e.metaKey && e.altKey && e.key === 'J') || (e.metaKey && e.altKey && e.key === 'j')) {
+        e.preventDefault();
+      }
+      // Bloqueia Ctrl+U (Ver Código Fonte) / Cmd+U (Mac)
+      if ((e.ctrlKey && e.key === 'U') || (e.ctrlKey && e.key === 'u') || (e.metaKey && e.key === 'U') || (e.metaKey && e.key === 'u')) {
+        e.preventDefault();
+      }
+    });
+  </script>
+  <div id="root"></div>
+  <script type="module" src="/src/main.tsx"></script>
+</body>
+
 </html>
