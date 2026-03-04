@@ -46,17 +46,7 @@ export default function Layout() {
                         {/* Logo */}
                         <div className="flex items-center justify-between mb-8">
                             <Link to="/" className="flex items-center gap-2.5" onClick={() => setMobileNavOpen(false)}>
-                                <div style={{
-                                    width: 36, height: 36, borderRadius: 10,
-                                    background: 'linear-gradient(135deg, #e63946 0%, #c1121f 100%)',
-                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                    boxShadow: '0 4px 16px rgba(230, 57, 70, 0.35)'
-                                }}>
-                                    <Sword size={18} color="#fff" />
-                                </div>
-                                <span style={{ fontWeight: 800, fontSize: 17, color: 'var(--text-primary)', letterSpacing: '-0.5px' }}>
-                                    Pride<span style={{ color: 'var(--accent)' }}>Market</span>
-                                </span>
+                                <img src="/logo.png" alt="PrideMarket" style={{ height: 36, objectFit: 'contain' }} />
                             </Link>
                             <button onClick={() => setMobileNavOpen(false)} style={{ color: 'var(--text-muted)' }}>
                                 <X size={18} />
@@ -105,18 +95,7 @@ export default function Layout() {
 
                     {/* Logo */}
                     <Link to="/" className="flex items-center gap-2.5 shrink-0">
-                        <div style={{
-                            width: 33, height: 33, borderRadius: 9,
-                            background: 'linear-gradient(135deg, #e63946 0%, #c1121f 100%)',
-                            display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            boxShadow: '0 4px 14px rgba(230, 57, 70, 0.35)',
-                            flexShrink: 0,
-                        }}>
-                            <Sword size={15} color="#fff" />
-                        </div>
-                        <span style={{ fontWeight: 800, fontSize: 16, letterSpacing: '-0.5px', color: 'var(--text-primary)' }} className="hidden sm:block">
-                            Pride<span style={{ color: 'var(--accent)' }}>Market</span>
-                        </span>
+                        <img src="/logo.png" alt="PrideMarket" style={{ height: 33, objectFit: 'contain' }} />
                     </Link>
 
                     {/* Search bar CMD+K */}

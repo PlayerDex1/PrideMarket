@@ -20,6 +20,10 @@ function normalizeItemName(name: string) {
     return name.replace(/^\+\d+\s*/, '').trim();
 }
 
+function cleanItemName(name: string) {
+    return name.replace(/\s*was added on the market\s*/i, '').trim();
+}
+
 export default function CommandPalette({ open, onClose }: CommandPaletteProps) {
     const navigate = useNavigate();
     const [query, setQuery] = useState('');
@@ -198,9 +202,9 @@ export default function CommandPalette({ open, onClose }: CommandPaletteProps) {
                                             margin: 0, fontSize: 13, fontWeight: 600,
                                             color: r.name.includes('+') ? 'var(--gold)' : 'var(--text-primary)',
                                             overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                                        }}>{r.name}</p>
+                                        }}>{cleanItemName(r.name)}</p>
                                         <p style={{ margin: '2px 0 0', fontSize: 11, color: 'var(--text-muted)' }}>
-                                            {r.price.toLocaleString('pt-BR', { maximumFractionDigits: 3 })} {r.currency}
+                                            {r.price.toLocaleString('en-US', { minimumFractionDigits: 3, maximumFractionDigits: 3 })} {r.currency}
                                         </p>
                                     </div>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 10, color: 'var(--text-muted)', flexShrink: 0 }}>

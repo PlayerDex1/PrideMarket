@@ -20,6 +20,10 @@ function extractQuantity(name: string) {
     return match ? parseInt(match[1], 10) : 1;
 }
 
+function cleanItemName(name: string) {
+    return name.replace(/\s*was added on the market\s*/i, '').trim();
+}
+
 const CustomTooltip = ({ active, payload, label }: any) => {
     if (!active || !payload?.length) return null;
     return (
@@ -29,7 +33,7 @@ const CustomTooltip = ({ active, payload, label }: any) => {
         }}>
             <p style={{ color: '#8888aa', margin: '0 0 5px', fontSize: 11 }}>{label}</p>
             <p style={{ color: '#f4a261', margin: 0, fontWeight: 700, fontSize: 14 }}>
-                {Number(payload[0].value).toLocaleString('pt-BR', { maximumFractionDigits: 3 })}
+                {Number(payload[0].value).toLocaleString('en-US', { minimumFractionDigits: 3, maximumFractionDigits: 3 })}
                 <span style={{ color: '#4a4a66', fontWeight: 400, fontSize: 10, marginLeft: 4 }}>{CURRENCY}</span>
             </p>
         </div>
@@ -123,7 +127,7 @@ export default function ItemDetail() {
                 {/* Info */}
                 <div style={{ flex: 1, minWidth: 0 }}>
                     <h1 style={{ margin: 0, fontSize: 22, fontWeight: 800, letterSpacing: '-0.5px', color: 'var(--text-primary)', textTransform: 'capitalize' }}>
-                        {name}
+                        {cleanItemName(name)}
                     </h1>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 8, flexWrap: 'wrap' }}>
                         <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
@@ -147,7 +151,7 @@ export default function ItemDetail() {
                     <div style={{ textAlign: 'right', flexShrink: 0 }}>
                         <p style={{ margin: 0, fontSize: 11, color: 'var(--text-muted)', marginBottom: 4 }}>Último preço</p>
                         <p style={{ margin: 0, fontSize: 24, fontWeight: 800, color: 'var(--gold)', letterSpacing: '-0.5px' }}>
-                            {lastPrice.toLocaleString('pt-BR', { maximumFractionDigits: 3 })}
+                            {lastPrice.toLocaleString('en-US', { minimumFractionDigits: 3, maximumFractionDigits: 3 })}
                         </p>
                         <p style={{ margin: 0, fontSize: 10, color: 'var(--text-muted)' }}>{CURRENCY}</p>
                     </div>
@@ -160,7 +164,7 @@ export default function ItemDetail() {
                     { label: 'Preço mínimo', value: minPrice, icon: TrendingDown, color: '#22c55e', bg: 'rgba(34,197,94,0.08)' },
                     { label: 'Preço máximo', value: maxPrice, icon: TrendingUp, color: '#e63946', bg: 'rgba(230,57,70,0.08)' },
                     { label: 'Preço médio', value: avgPrice, icon: BarChart2, color: '#f4a261', bg: 'rgba(244,162,97,0.08)' },
-                    { label: 'Total listado', value: null, icon: Clock, color: '#a78bfa', bg: 'rgba(167,139,250,0.08)', raw: `${history.length}x` },
+                    { label: 'Total listado', value: null, icon: Clock, color: '#a78bfa', bg: 'rgba(167,139,250,0.08)', raw: `${history.length}x` } as const,
                 ].map(s => (
                     <div key={s.label} className="stat-card">
                         <div style={{ width: 32, height: 32, borderRadius: 8, background: s.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 12 }}>
@@ -168,7 +172,7 @@ export default function ItemDetail() {
                         </div>
                         <p style={{ margin: 0, fontSize: 11, color: 'var(--text-secondary)' }}>{s.label}</p>
                         <p style={{ margin: '5px 0 0', fontSize: 15, fontWeight: 800, color: 'var(--text-primary)', letterSpacing: '-0.3px' }}>
-                            {s.raw ?? `${s.value!.toLocaleString('pt-BR', { maximumFractionDigits: 3 })} PC`}
+                            {s.raw ?? `${s.value!.toLocaleString('en-US', { minimumFractionDigits: 3, maximumFractionDigits: 3 })} PC`}
                         </p>
                     </div>
                 ))}
@@ -244,19 +248,18 @@ export default function ItemDetail() {
                                                     onError={e => { (e.target as HTMLImageElement).src = 'https://l2db.info/icon/weapon_the_sword_of_hero_i00.png'; }} />
                                             </div>
                                             <span style={{ fontWeight: 600, color: item.name.includes('+') ? 'var(--gold)' : 'var(--text-primary)' }}>
-                                                {item.name}
+                                                {cleanItemName(item.name)}
                                             </span>
                                         </div>
                                     </td>
                                     <td style={{ padding: '10px 16px' }}>
                                         <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                                             <span style={{ fontWeight: 700, color: 'var(--gold)' }}>
-                                                {item.price.toLocaleString('pt-BR', { maximumFractionDigits: 3 })}
-                                                <span style={{ fontSize: 10, fontWeight: 400, color: 'var(--text-muted)', marginLeft: 4 }}>{CURRENCY}</span>
+                                                {item.price.toLocaleString('en-US', { minimumFractionDigits: 3, maximumFractionDigits: 3 })} {CURRENCY}
                                             </span>
                                             {extractQuantity(item.name) > 1 && (
                                                 <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>
-                                                    {extractQuantity(item.name).toLocaleString()}x · {(item.price / extractQuantity(item.name)).toLocaleString('pt-BR', { maximumFractionDigits: 3 })} {CURRENCY}/un
+                                                    {extractQuantity(item.name).toLocaleString()}x · {(item.price / extractQuantity(item.name)).toLocaleString('en-US', { minimumFractionDigits: 3, maximumFractionDigits: 3 })} {CURRENCY}/un
                                                 </span>
                                             )}
                                         </div>

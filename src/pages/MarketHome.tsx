@@ -19,6 +19,10 @@ function normalizeItemName(name: string) {
     return name.replace(/^\+\d+\s*/, '').trim();
 }
 
+function cleanItemName(name: string) {
+    return name.replace(/\s*was added on the market\s*/i, '').trim();
+}
+
 function extractQuantity(name: string) {
     const match = name.match(/\[\s*(\d+)\s*pcs\.?\]/i) || name.match(/\bx\s*(\d+)\b/i) || name.match(/\b(\d+)\s*x\b/i);
     return match ? parseInt(match[1], 10) : 1;
@@ -33,10 +37,10 @@ function formatTime(iso: string) {
 }
 
 function formatPrice(price: number) {
-    if (price >= 1_000_000_000) return `${(price / 1_000_000_000).toLocaleString('pt-BR', { maximumFractionDigits: 2 })}B`;
-    if (price >= 1_000_000) return `${(price / 1_000_000).toLocaleString('pt-BR', { maximumFractionDigits: 2 })}M`;
-    if (price >= 1_000) return `${(price / 1_000).toLocaleString('pt-BR', { maximumFractionDigits: 2 })}K`;
-    return price.toLocaleString('pt-BR', { maximumFractionDigits: 3 });
+    if (price >= 1_000_000_000) return `${(price / 1_000_000_000).toLocaleString('en-US', { minimumFractionDigits: 3, maximumFractionDigits: 3 })}B`;
+    if (price >= 1_000_000) return `${(price / 1_000_000).toLocaleString('en-US', { minimumFractionDigits: 3, maximumFractionDigits: 3 })}M`;
+    if (price >= 1_000) return `${(price / 1_000).toLocaleString('en-US', { minimumFractionDigits: 3, maximumFractionDigits: 3 })}K`;
+    return price.toLocaleString('en-US', { minimumFractionDigits: 3, maximumFractionDigits: 3 });
 }
 
 const CURRENCIES = ['all', 'pride coin', 'adena'];
@@ -293,7 +297,7 @@ export default function MarketHome() {
                                                     <span style={{
                                                         fontWeight: 600, fontSize: 13,
                                                         color: item.name.includes('+') ? 'var(--gold)' : 'var(--text-primary)',
-                                                    }}>{item.name}</span>
+                                                    }}>{cleanItemName(item.name)}</span>
                                                     {isNew(item.timestamp) && (
                                                         <span className="badge-new" style={{
                                                             fontSize: 9, fontWeight: 800, padding: '2px 7px',
@@ -308,7 +312,7 @@ export default function MarketHome() {
                                         <td style={{ padding: '10px 16px' }}>
                                             <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                                                 <span style={{ fontWeight: 700, fontSize: 13, color: 'var(--gold)' }}>
-                                                    {item.price.toLocaleString('pt-BR', { maximumFractionDigits: 3 })}
+                                                    {item.price.toLocaleString('en-US', { minimumFractionDigits: 3, maximumFractionDigits: 3 })}
                                                     <span style={{ fontSize: 10, fontWeight: 500, color: 'var(--text-secondary)', marginLeft: 4 }}>{item.currency}</span>
                                                 </span>
                                                 {extractQuantity(item.name) > 1 && (() => {
@@ -316,7 +320,7 @@ export default function MarketHome() {
                                                     const unitPrice = item.price / qty;
                                                     return (
                                                         <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>
-                                                            {qty.toLocaleString()}x · {unitPrice.toLocaleString('pt-BR', { maximumFractionDigits: 3 })} {item.currency}/un
+                                                            {qty.toLocaleString()}x · {unitPrice.toLocaleString('en-US', { minimumFractionDigits: 3, maximumFractionDigits: 3 })} {item.currency}/un
                                                         </span>
                                                     );
                                                 })()}
@@ -394,10 +398,10 @@ export default function MarketHome() {
                                 {/* Info */}
                                 <div style={{ flex: 1, minWidth: 0 }}>
                                     <p style={{ margin: 0, fontSize: 11, fontWeight: 600, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                        {item.name}
+                                        {cleanItemName(item.name)}
                                     </p>
                                     <p style={{ margin: 0, fontSize: 10, color: 'var(--text-muted)', marginTop: 1 }}>
-                                        {item.count}x · mín {formatPrice(item.minPrice)} PC
+                                        {item.count}x · mín {item.minPrice.toLocaleString('en-US', { minimumFractionDigits: 3, maximumFractionDigits: 3 })} PC
                                     </p>
                                 </div>
 
