@@ -195,65 +195,45 @@ export default function Layout() {
                 right: 24,
                 display: 'flex',
                 flexDirection: 'column',
-                gap: 12,
+                gap: 16,
                 zIndex: 50
             }}>
                 <a href="https://chat.whatsapp.com/DgA8TY1lSnkIBxeETrQc31" target="_blank" rel="noopener noreferrer"
                     title="WhatsApp Pride"
                     style={{
-                        width: 44, height: 44, borderRadius: '50%',
-                        background: 'rgba(20, 20, 30, 0.7)', color: 'var(--text-secondary)',
-                        border: '1px solid var(--border)',
+                        width: 52, height: 52,
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        boxShadow: '0 4px 14px rgba(0, 0, 0, 0.3)',
-                        transition: 'all 0.2s',
-                        backdropFilter: 'blur(10px)',
-                        cursor: 'pointer'
+                        transition: 'transform 0.2s, filter 0.2s',
+                        filter: 'drop-shadow(0 4px 6px rgba(0,0,0,0.5))'
                     }}
                     onMouseEnter={e => {
-                        (e.currentTarget as HTMLElement).style.transform = 'translateY(-2px)';
-                        (e.currentTarget as HTMLElement).style.color = '#25D366';
-                        (e.currentTarget as HTMLElement).style.borderColor = 'rgba(37, 211, 102, 0.4)';
-                        (e.currentTarget as HTMLElement).style.boxShadow = '0 6px 16px rgba(37, 211, 102, 0.2)';
+                        (e.currentTarget as HTMLElement).style.transform = 'translateY(-4px) scale(1.05)';
+                        (e.currentTarget as HTMLElement).style.filter = 'drop-shadow(0 8px 16px rgba(37, 211, 102, 0.4))';
                     }}
                     onMouseLeave={e => {
-                        (e.currentTarget as HTMLElement).style.transform = 'translateY(0)';
-                        (e.currentTarget as HTMLElement).style.color = 'var(--text-secondary)';
-                        (e.currentTarget as HTMLElement).style.borderColor = 'var(--border)';
-                        (e.currentTarget as HTMLElement).style.boxShadow = '0 4px 14px rgba(0, 0, 0, 0.3)';
+                        (e.currentTarget as HTMLElement).style.transform = 'translateY(0) scale(1)';
+                        (e.currentTarget as HTMLElement).style.filter = 'drop-shadow(0 4px 6px rgba(0,0,0,0.5))';
                     }}>
-                    <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" />
-                    </svg>
+                    <img src="/whatsapp-icon.png" alt="WhatsApp" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
                 </a>
 
                 <a href="https://discord.com/invite/prideessence" target="_blank" rel="noopener noreferrer"
                     title="Discord Pride"
                     style={{
-                        width: 44, height: 44, borderRadius: '50%',
-                        background: 'rgba(20, 20, 30, 0.7)', color: 'var(--text-secondary)',
-                        border: '1px solid var(--border)',
+                        width: 52, height: 52,
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        boxShadow: '0 4px 14px rgba(0, 0, 0, 0.3)',
-                        transition: 'all 0.2s',
-                        backdropFilter: 'blur(10px)',
-                        cursor: 'pointer'
+                        transition: 'transform 0.2s, filter 0.2s',
+                        filter: 'drop-shadow(0 4px 6px rgba(0,0,0,0.5))'
                     }}
                     onMouseEnter={e => {
-                        (e.currentTarget as HTMLElement).style.transform = 'translateY(-2px)';
-                        (e.currentTarget as HTMLElement).style.color = '#5865F2';
-                        (e.currentTarget as HTMLElement).style.borderColor = 'rgba(88, 101, 242, 0.4)';
-                        (e.currentTarget as HTMLElement).style.boxShadow = '0 6px 16px rgba(88, 101, 242, 0.2)';
+                        (e.currentTarget as HTMLElement).style.transform = 'translateY(-4px) scale(1.05)';
+                        (e.currentTarget as HTMLElement).style.filter = 'drop-shadow(0 8px 16px rgba(88, 101, 242, 0.4))';
                     }}
                     onMouseLeave={e => {
-                        (e.currentTarget as HTMLElement).style.transform = 'translateY(0)';
-                        (e.currentTarget as HTMLElement).style.color = 'var(--text-secondary)';
-                        (e.currentTarget as HTMLElement).style.borderColor = 'var(--border)';
-                        (e.currentTarget as HTMLElement).style.boxShadow = '0 4px 14px rgba(0, 0, 0, 0.3)';
+                        (e.currentTarget as HTMLElement).style.transform = 'translateY(0) scale(1)';
+                        (e.currentTarget as HTMLElement).style.filter = 'drop-shadow(0 4px 6px rgba(0,0,0,0.5))';
                     }}>
-                    <svg viewBox="0 0 24 24" width="22" height="22" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" />
-                    </svg>
+                    <img src="/discord-icon.png" alt="Discord" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
                 </a>
             </div>
         </div>
