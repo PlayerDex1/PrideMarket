@@ -188,6 +188,51 @@ export default function Layout() {
                     </div>
                 </div>
             </footer>
+            {/* Floating Social Widget */}
+            <div style={{
+                position: 'fixed',
+                bottom: 24,
+                right: 24,
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 12,
+                zIndex: 50
+            }}>
+                <a href="https://chat.whatsapp.com/DgA8TY1lSnkIBxeETrQc31" target="_blank" rel="noopener noreferrer"
+                    title="WhatsApp"
+                    style={{
+                        width: 48, height: 48, borderRadius: '50%',
+                        background: '#25D366', color: 'white',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        boxShadow: '0 4px 14px rgba(37, 211, 102, 0.4)',
+                        transition: 'transform 0.2s',
+                    }}
+                    onMouseEnter={e => { (e.currentTarget as HTMLElement).style.transform = 'scale(1.1)'; }}
+                    onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform = 'scale(1)'; }}>
+                    <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" />
+                    </svg>
+                </a>
+
+                <a href="https://discord.com/invite/prideessence" target="_blank" rel="noopener noreferrer"
+                    title="Discord Oficial"
+                    style={{
+                        height: 48, borderRadius: 24, padding: '0 16px',
+                        background: '#5865F2', color: 'white',
+                        display: 'flex', alignItems: 'center', gap: 10,
+                        boxShadow: '0 4px 14px rgba(88, 101, 242, 0.4)',
+                        transition: 'transform 0.2s',
+                        textDecoration: 'none',
+                        fontWeight: 700, fontSize: 13,
+                    }}
+                    onMouseEnter={e => { (e.currentTarget as HTMLElement).style.transform = 'scale(1.05)'; }}
+                    onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform = 'scale(1)'; }}>
+                    <svg viewBox="0 0 24 24" width="22" height="22" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" />
+                    </svg>
+                    <span>DISCORD SERVER</span>
+                </a>
+            </div>
         </div>
     );
 }
