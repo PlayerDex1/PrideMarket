@@ -2,25 +2,52 @@
 <html lang="pt-BR">
 
 <head>
-  <script
-    data-cookieconsent="ignore">    window.dataLayer = window.dataLayer || []; function gtag() { dataLayer.push(arguments); } gtag("consent", "default", { ad_personalization: "denied", ad_storage: "denied", ad_user_data: "denied", analytics_storage: "denied", functionality_storage: "denied", personalization_storage: "denied", security_storage: "granted", wait_for_update: 500, }); gtag("set", "ads_data_redaction", true); gtag("set", "url_passthrough", false);</script>
-
-  <script id="Cookiebot" src="https://consent.cookiebot.com/uc.js" data-cbid="507303a1-7f06-484d-beb6-478ce3b1846a"
-    data-blockingmode="auto" type="text/javascript"></script>
-
-  <!-- Google Tag Manager -->
-  <script>(function (w, d, s, l, i) {
-      w[l] = w[l] || []; w[l].push({
-        'gtm.start':
-          new Date().getTime(), event: 'gtm.js'
-      }); var f = d.getElementsByTagName(s)[0],
-        j = d.createElement(s), dl = l != 'dataLayer' ? '&l=' + l : ''; j.async = true; j.src =
-          'https://www.googletagmanager.com/gtm.js?id=' + i + dl; f.parentNode.insertBefore(j, f);
-    })(window, document, 'script', 'dataLayer', 'GTM-KP9PHV4Z');</script>
-  <!-- End Google Tag Manager -->
-
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <!-- Consent Mode -->
+  <script data-cookieconsent="ignore">
+    window.dataLayer = window.dataLayer || [];
+
+    function gtag() {
+      dataLayer.push(arguments);
+    }
+
+    gtag("consent", "default", {
+      ad_personalization: "denied",
+      ad_storage: "denied",
+      ad_user_data: "denied",
+      analytics_storage: "denied",
+      functionality_storage: "denied",
+      personalization_storage: "denied",
+      security_storage: "granted",
+      wait_for_update: 500
+    });
+
+    gtag("set", "ads_data_redaction", true);
+    gtag("set", "url_passthrough", false);
+  </script>
+
+  <!-- Cookiebot -->
+  <script id="Cookiebot" src="https://consent.cookiebot.com/uc.js" data-cbid="507303a1-7f06-484d-beb6-478ce3b1846a"
+    data-blockingmode="auto" type="text/javascript">
+    </script>
+
+  <!-- Google Tag Manager -->
+  <script>
+    (function (w, d, s, l, i) {
+      w[l] = w[l] || [];
+      w[l].push({ 'gtm.start': new Date().getTime(), event: 'gtm.js' });
+      var f = d.getElementsByTagName(s)[0],
+        j = d.createElement(s),
+        dl = l != 'dataLayer' ? '&l=' + l : '';
+      j.async = true;
+      j.src = 'https://www.googletagmanager.com/gtm.js?id=' + i + dl;
+      f.parentNode.insertBefore(j, f);
+    })(window, document, 'script', 'dataLayer', 'GTM-KP9PHV4Z');
+  </script>
+  <!-- End Google Tag Manager -->
+
   <meta name="description"
     content="PrideMarket — Acompanhe preços, tendências e oportunidades do mercado do servidor Pride em tempo real." />
   <meta name="theme-color" content="#050508" />
@@ -33,42 +60,14 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap"
     rel="stylesheet" />
-  <!-- Meta Pixel Code -->
-  <script>
-    !function (f, b, e, v, n, t, s) {
-      if (f.fbq) return; n = f.fbq = function () {
-        n.callMethod ?
-          n.callMethod.apply(n, arguments) : n.queue.push(arguments)
-      };
-      if (!f._fbq) f._fbq = n;
-      n.push = n;
-      n.loaded = !0;
-      n.version = '2.0';
-      n.queue = [];
-      t = b.createElement(e);
-      t.async = !0;
-      t.src = v;
-      s = b.getElementsByTagName(e)[0];
-      s.parentNode.insertBefore(t, s);
-    }(window, document, 'script', 'https://connect.facebook.net/en_US/fbevents.js');
-
-    fbq('init', 'SEU_PIXEL_ID_AQUI');
-    fbq('track', 'PageView');
-  </script>
-  <!-- End Meta Pixel Code -->
 </head>
 
 <body>
-  <!-- Meta Pixel Code (noscript) -->
-  <noscript>
-    <img height="1" width="1" style="display:none"
-      src="https://www.facebook.com/tr?id=SEU_PIXEL_ID_AQUI&ev=PageView&noscript=1" />
-  </noscript>
-  <!-- End Meta Pixel Code (noscript) -->
-
   <!-- Google Tag Manager (noscript) -->
-  <noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-KP9PHV4Z" height="0" width="0"
-      style="display:none;visibility:hidden"></iframe></noscript>
+  <noscript>
+    <iframe src="https://www.googletagmanager.com/ns.html?id=GTM-KP9PHV4Z" height="0" width="0"
+      style="display:none;visibility:hidden"></iframe>
+  </noscript>
   <!-- End Google Tag Manager (noscript) -->
 
   <!-- Script Anti-DevTools (Dificulta Botão Direito e F12) -->
