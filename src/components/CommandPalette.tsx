@@ -1,8 +1,8 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, Clock, X, Package, TrendingUp } from 'lucide-react';
+import { Search, Clock, X, TrendingUp, Package } from 'lucide-react';
 import { supabase } from '../lib/supabase';
-import { cleanItemName, normalizeItemName, formatPrice } from '../lib/format';
+import { formatCurrency } from '../lib/format';
 
 interface Result {
     name: string;
@@ -12,12 +12,20 @@ interface Result {
     normalized: string;
 }
 
-interface Props {
+interface CommandPaletteProps {
     open: boolean;
     onClose: () => void;
 }
 
-export default function CommandPalette({ open, onClose }: Props) {
+function normalizeItemName(name: string) {
+    return name.replace(/^\+\d+\s*/, '').trim();
+}
+
+function cleanItemName(name: string) {
+    return name.replace(/\s*was added on the market\s*/i, '').trim();
+}
+
+export default function CommandPalette({ open, onClose }: CommandPaletteProps) {
     const navigate = useNavigate();
     const [query, setQuery] = useState('');
     const [results, setResults] = useState<Result[]>([]);
@@ -25,43 +33,32 @@ export default function CommandPalette({ open, onClose }: Props) {
     const [selected, setSelected] = useState(0);
     const inputRef = useRef<HTMLInputElement>(null);
 
-    /* Focus on open */
     useEffect(() => {
         if (open) {
             setQuery('');
             setResults([]);
             setSelected(0);
-            setTimeout(() => inputRef.current?.focus(), 40);
+            setTimeout(() => inputRef.current?.focus(), 50);
         }
     }, [open]);
 
-    /* ⌘K / Ctrl+K */
-    useEffect(() => {
-        const handler = (e: KeyboardEvent) => {
-            if ((e.metaKey || e.ctrlKey) && e.key === 'k') { e.preventDefault(); open ? onClose() : void 0; }
-        };
-        window.addEventListener('keydown', handler);
-        return () => window.removeEventListener('keydown', handler);
-    }, [open, onClose]);
-
-    /* Search with debounce */
     useEffect(() => {
         if (!query.trim()) { setResults([]); return; }
-        const t = setTimeout(async () => {
+        const timeout = setTimeout(async () => {
             setLoading(true);
             const { data } = await supabase
                 .from('pride_market_items')
                 .select('name, price, currency, timestamp')
                 .ilike('name', `%${query}%`)
                 .order('timestamp', { ascending: false })
-                .limit(10);
+                .limit(8);
             if (data) {
                 const seen = new Set<string>();
-                const deduped = (data as any[]).reduce<Result[]>((acc, d) => {
-                    const key = normalizeItemName(d.name).toLowerCase();
+                const deduped = data.reduce<Result[]>((acc, d) => {
+                    const key = normalizeItemName(d.name);
                     if (!seen.has(key)) {
                         seen.add(key);
-                        acc.push({ name: cleanItemName(d.name), price: d.price, currency: d.currency, timestamp: d.timestamp, normalized: normalizeItemName(d.name) });
+                        acc.push({ name: d.name, price: d.price, currency: d.currency, timestamp: d.timestamp, normalized: key });
                     }
                     return acc;
                 }, []);
@@ -70,14 +67,13 @@ export default function CommandPalette({ open, onClose }: Props) {
             }
             setLoading(false);
         }, 200);
-        return () => clearTimeout(t);
+        return () => clearTimeout(timeout);
     }, [query]);
 
-    /* Keyboard nav */
     useEffect(() => {
         const handler = (e: KeyboardEvent) => {
             if (!open) return;
-            if (e.key === 'Escape') { onClose(); }
+            if (e.key === 'Escape') onClose();
             if (e.key === 'ArrowDown') { e.preventDefault(); setSelected(s => Math.min(s + 1, results.length - 1)); }
             if (e.key === 'ArrowUp') { e.preventDefault(); setSelected(s => Math.max(s - 1, 0)); }
             if (e.key === 'Enter' && results[selected]) {
@@ -91,41 +87,41 @@ export default function CommandPalette({ open, onClose }: Props) {
 
     if (!open) return null;
 
-    const go = (r: Result) => {
-        navigate(`/item/${encodeURIComponent(r.normalized)}`);
-        onClose();
-    };
+    const go = (name: string) => { navigate(`/item/${encodeURIComponent(name)}`); onClose(); };
+    const fmt = (iso: string) => new Date(iso).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
 
     return (
-        /* Backdrop */
         <div
             style={{
                 position: 'fixed', inset: 0, zIndex: 9999,
                 display: 'flex', alignItems: 'flex-start', justifyContent: 'center',
-                paddingTop: '14vh', padding: '14vh 16px 0',
-                background: 'rgba(0,0,0,0.7)',
-                backdropFilter: 'blur(10px)',
-                WebkitBackdropFilter: 'blur(10px)',
+                paddingTop: '14vh', paddingLeft: 16, paddingRight: 16,
+                background: 'rgba(0,0,0,0.75)',
+                backdropFilter: 'blur(8px)',
+                WebkitBackdropFilter: 'blur(8px)',
             }}
             onClick={onClose}
         >
-            {/* Panel */}
             <div
                 className="animate-fade-in-scale"
                 style={{
-                    width: '100%', maxWidth: 560,
-                    background: 'var(--bg-surface)',
-                    border: '1px solid var(--border-bright)',
-                    borderRadius: 'var(--radius-lg)',
-                    boxShadow: '0 32px 80px rgba(0,0,0,0.8)',
+                    width: '100%', maxWidth: 580,
+                    background: '#0d0d14',
+                    border: '1px solid #2a2a40',
+                    borderRadius: 18,
+                    boxShadow: '0 32px 80px rgba(0,0,0,0.8), 0 0 0 1px rgba(230,57,70,0.05)',
                     overflow: 'hidden',
                     fontFamily: 'var(--font-sans)',
                 }}
                 onClick={e => e.stopPropagation()}
             >
-                {/* Input */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '13px 16px', borderBottom: `1px solid ${query ? 'var(--border)' : 'transparent'}` }}>
-                    <Search size={16} style={{ color: query ? 'var(--accent)' : 'var(--text-muted)', flexShrink: 0, transition: 'color 0.2s' }} />
+                {/* Input row */}
+                <div style={{
+                    display: 'flex', alignItems: 'center', gap: 12,
+                    padding: '14px 18px',
+                    borderBottom: `1px solid ${query && results.length > 0 ? '#2a2a40' : 'transparent'}`,
+                }}>
+                    <Search size={18} style={{ color: query ? 'var(--accent)' : 'var(--text-muted)', flexShrink: 0, transition: 'color 0.2s' }} />
                     <input
                         ref={inputRef}
                         type="text"
@@ -133,81 +129,86 @@ export default function CommandPalette({ open, onClose }: Props) {
                         onChange={e => setQuery(e.target.value)}
                         placeholder="Buscar item no mercado Pride..."
                         style={{
-                            flex: 1, background: 'transparent', border: 'none', outline: 'none',
-                            fontSize: 15, color: 'var(--text-primary)', fontFamily: 'var(--font-sans)',
+                            flex: 1, background: 'transparent',
+                            border: 'none', outline: 'none',
+                            fontSize: 15, color: 'var(--text-primary)',
+                            fontFamily: 'var(--font-sans)',
                         }}
                     />
-                    <div style={{ display: 'flex', gap: 5, alignItems: 'center', flexShrink: 0 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
                         {query && (
                             <button onClick={() => setQuery('')}
-                                style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', display: 'flex', padding: 2, borderRadius: 4 }}>
-                                <X size={13} />
+                                style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: 3, display: 'flex', borderRadius: 4 }}>
+                                <X size={14} />
                             </button>
                         )}
-                        <kbd style={{ padding: '2px 7px', background: 'var(--bg-overlay)', border: '1px solid var(--border-bright)', borderRadius: 5, fontSize: 10, color: 'var(--text-muted)', fontFamily: 'var(--font-sans)' }}>ESC</kbd>
+                        <kbd style={{
+                            padding: '3px 8px', background: 'var(--bg-overlay)', border: '1px solid var(--border-bright)',
+                            borderRadius: 6, fontSize: 10, color: 'var(--text-muted)', fontFamily: 'var(--font-sans)',
+                        }}>ESC</kbd>
                     </div>
                 </div>
 
                 {/* Results */}
-                <div style={{ maxHeight: 350, overflowY: 'auto' }}>
-                    {/* Shimmer */}
+                <div style={{ maxHeight: 360, overflowY: 'auto' }}>
                     {loading && (
-                        <div style={{ padding: '12px 12px', display: 'flex', flexDirection: 'column', gap: 6 }}>
-                            {[1, 2, 3].map(i => <div key={i} className="shimmer" style={{ height: 48, borderRadius: 10, animationDelay: `${i * 0.08}s` }} />)}
+                        <div style={{ padding: '20px 18px', display: 'flex', flexDirection: 'column', gap: 8 }}>
+                            {[1, 2, 3].map(i => (
+                                <div key={i} className="shimmer" style={{ height: 44, borderRadius: 10 }} />
+                            ))}
                         </div>
                     )}
 
-                    {/* No results */}
                     {!loading && query && results.length === 0 && (
-                        <div style={{ padding: '32px 16px', textAlign: 'center' }}>
-                            <Package size={28} style={{ color: 'var(--text-muted)', opacity: 0.25, margin: '0 auto 10px' }} />
-                            <p style={{ color: 'var(--text-muted)', fontSize: 13, margin: 0 }}>
-                                Nenhum item para "<span style={{ color: 'var(--text-secondary)' }}>{query}</span>"
-                            </p>
+                        <div style={{ padding: '32px 18px', textAlign: 'center' }}>
+                            <Package size={32} style={{ color: 'var(--text-muted)', opacity: 0.3, margin: '0 auto 12px' }} />
+                            <p style={{ color: 'var(--text-muted)', fontSize: 13, margin: 0 }}>Nenhum item para "<span style={{ color: 'var(--text-secondary)' }}>{query}</span>"</p>
                         </div>
                     )}
 
-                    {/* Placeholder */}
                     {!loading && !query && (
-                        <div style={{ padding: '28px 16px', textAlign: 'center' }}>
-                            <Search size={26} style={{ color: 'var(--text-muted)', opacity: 0.2, margin: '0 auto 8px' }} />
-                            <p style={{ color: 'var(--text-muted)', fontSize: 13, margin: 0 }}>Digite para buscar itens...</p>
+                        <div style={{ padding: '20px 18px', textAlign: 'center' }}>
+                            <Search size={28} style={{ color: 'var(--text-muted)', opacity: 0.3, margin: '0 auto 10px' }} />
+                            <p style={{ color: 'var(--text-muted)', fontSize: 13, margin: 0 }}>Digite para buscar itens no mercado...</p>
                         </div>
                     )}
 
-                    {/* Result list */}
                     {!loading && results.length > 0 && (
-                        <div style={{ padding: 6 }}>
+                        <div style={{ padding: '8px' }}>
                             {results.map((r, i) => (
-                                <button key={r.normalized} onClick={() => go(r)}
+                                <button
+                                    key={r.normalized}
+                                    onClick={() => go(r.normalized)}
                                     style={{
-                                        width: '100%', display: 'flex', alignItems: 'center', gap: 10,
-                                        padding: '9px 12px', borderRadius: 10, textAlign: 'left', cursor: 'pointer',
+                                        width: '100%', display: 'flex', alignItems: 'center', gap: 12,
+                                        padding: '10px 12px', borderRadius: 10,
                                         background: i === selected ? 'rgba(230,57,70,0.08)' : 'transparent',
                                         border: `1px solid ${i === selected ? 'rgba(230,57,70,0.2)' : 'transparent'}`,
-                                        transition: 'all 0.1s', fontFamily: 'var(--font-sans)',
+                                        cursor: 'pointer', textAlign: 'left', transition: 'all 0.1s',
+                                        fontFamily: 'var(--font-sans)',
                                     }}
                                     onMouseEnter={() => setSelected(i)}
                                 >
                                     <div style={{
-                                        width: 32, height: 32, borderRadius: 8, flexShrink: 0,
+                                        width: 32, height: 32, borderRadius: 8,
                                         background: i === selected ? 'rgba(230,57,70,0.1)' : 'var(--bg-elevated)',
                                         border: '1px solid var(--border)',
-                                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                        display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
                                     }}>
-                                        <TrendingUp size={13} color={i === selected ? 'var(--accent)' : 'var(--text-muted)'} />
+                                        <TrendingUp size={14} color={i === selected ? 'var(--accent)' : 'var(--text-muted)'} />
                                     </div>
                                     <div style={{ flex: 1, minWidth: 0 }}>
-                                        <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: r.name.startsWith('+') ? 'var(--gold)' : 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                            {r.name}
-                                        </p>
+                                        <p style={{
+                                            margin: 0, fontSize: 13, fontWeight: 600,
+                                            color: r.name.includes('+') ? 'var(--gold)' : 'var(--text-primary)',
+                                            overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                                        }}>{cleanItemName(r.name)}</p>
                                         <p style={{ margin: '2px 0 0', fontSize: 11, color: 'var(--text-muted)' }}>
-                                            {formatPrice(r.price)} {r.currency}
+                                            {formatCurrency(r.price, r.currency)} {r.currency}
                                         </p>
                                     </div>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 10, color: 'var(--text-muted)', flexShrink: 0 }}>
-                                        <Clock size={9} />
-                                        {new Date(r.timestamp).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                                        <Clock size={9} /> {fmt(r.timestamp)}
                                     </div>
                                 </button>
                             ))}
@@ -216,11 +217,15 @@ export default function CommandPalette({ open, onClose }: Props) {
                 </div>
 
                 {/* Footer hints */}
-                <div style={{ padding: '9px 16px', borderTop: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 14, fontSize: 10, color: 'var(--text-muted)' }}>
-                    {[['↑↓', 'navegar'], ['↵', 'abrir'], ['ESC', 'fechar']].map(([k, l]) => (
-                        <span key={k} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                            <kbd style={{ padding: '1px 5px', background: 'var(--bg-overlay)', border: '1px solid var(--border-bright)', borderRadius: 4, fontFamily: 'var(--font-sans)' }}>{k}</kbd>
-                            {l}
+                <div style={{
+                    padding: '10px 18px', borderTop: '1px solid var(--border)',
+                    display: 'flex', alignItems: 'center', gap: 16,
+                    fontSize: 10, color: 'var(--text-muted)',
+                }}>
+                    {[['↑↓', 'navegar'], ['↵', 'abrir'], ['ESC', 'fechar']].map(([key, label]) => (
+                        <span key={key} style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                            <kbd style={{ padding: '1px 5px', background: 'var(--bg-overlay)', border: '1px solid var(--border-bright)', borderRadius: 4, fontFamily: 'var(--font-sans)' }}>{key}</kbd>
+                            {label}
                         </span>
                     ))}
                     <span style={{ marginLeft: 'auto' }}>Pride<span style={{ color: 'var(--accent)' }}>Market</span></span>
