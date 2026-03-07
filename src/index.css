@@ -1,55 +1,92 @@
-@import "tailwindcss";
+/* ============================================================
+   PrideMarket — Design System
+   ============================================================ */
 
-/* ============================================
-   PRIDE MARKET — DESIGN SYSTEM
-   ============================================ */
+/* ── Google Fonts already loaded via <head> link ── */
 
+/* ── 1. Tokens ─────────────────────────────────────────────── */
 :root {
+    /* Background */
     --bg-base: #050508;
-    --bg-surface: #0d0d14;
-    --bg-elevated: #12121c;
-    --bg-overlay: #18182a;
-    --border: #1e1e30;
-    --border-bright: #2a2a40;
-    --accent: #e63946;
-    --accent-dim: rgba(230, 57, 70, 0.15);
-    --accent-glow: rgba(230, 57, 70, 0.3);
-    --gold: #f4a261;
-    --gold-dim: rgba(244, 162, 97, 0.12);
+    --bg-surface: #0b0b12;
+    --bg-elevated: #111119;
+    --bg-overlay: #18181f;
+
+    /* Borders */
+    --border: rgba(255, 255, 255, 0.06);
+    --border-bright: rgba(255, 255, 255, 0.12);
+
+    /* Text */
     --text-primary: #f0f0f8;
     --text-secondary: #8888aa;
-    --text-muted: #4a4a66;
+    --text-muted: #44445a;
+
+    /* Accent */
+    --accent: #e63946;
+    --accent-dim: rgba(230, 57, 70, 0.15);
+    --gold: #f4a261;
+    --green: #22c55e;
+    --purple: #a78bfa;
+    --blue: #60a5fa;
+
+    /* Typography */
     --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
+
+    /* Radius */
+    --radius-sm: 8px;
+    --radius: 12px;
+    --radius-lg: 18px;
+    --radius-xl: 24px;
+
+    /* Shadows */
+    --shadow-card: 0 4px 24px rgba(0, 0, 0, 0.5);
+    --shadow-glow: 0 0 32px rgba(230, 57, 70, 0.15);
 }
 
-/* Base */
+/* ── 2. Reset ───────────────────────────────────────────────── */
 *,
 *::before,
 *::after {
     box-sizing: border-box;
-}
-
-html,
-body {
     margin: 0;
     padding: 0;
+}
+
+html {
+    scroll-behavior: smooth;
+    -webkit-font-smoothing: antialiased;
+}
+
+body {
+    font-family: var(--font-sans);
     background: var(--bg-base);
     color: var(--text-primary);
+    min-height: 100dvh;
+    line-height: 1.5;
+}
+
+#root {
+    display: flex;
+    flex-direction: column;
+    min-height: 100dvh;
+}
+
+a {
+    color: inherit;
+    text-decoration: none;
+}
+
+button {
     font-family: var(--font-sans);
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
-    -webkit-user-select: none;
-    -moz-user-select: none;
-    -ms-user-select: none;
-    user-select: none;
+    cursor: pointer;
 }
 
 img {
-    pointer-events: none;
-    -webkit-user-drag: none;
+    display: block;
+    max-width: 100%;
 }
 
-/* Scrollbar premium */
+/* ── 3. Scrollbar ───────────────────────────────────────────── */
 ::-webkit-scrollbar {
     width: 6px;
     height: 6px;
@@ -60,28 +97,25 @@ img {
 }
 
 ::-webkit-scrollbar-thumb {
-    background: var(--border-bright);
+    background: rgba(255, 255, 255, 0.1);
     border-radius: 99px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-    background: #3a3a58;
+    background: rgba(255, 255, 255, 0.18);
 }
 
-/* Text selection */
+/* ── 4. Selection ───────────────────────────────────────────── */
 ::selection {
-    background: var(--accent-dim);
-    color: var(--accent);
+    background: var(--accent);
+    color: #fff;
 }
 
-/* ============================================
-   ANIMATIONS
-   ============================================ */
-
+/* ── 5. Animations ──────────────────────────────────────────── */
 @keyframes fadeIn {
     from {
         opacity: 0;
-        transform: translateY(6px);
+        transform: translateY(8px);
     }
 
     to {
@@ -93,7 +127,7 @@ img {
 @keyframes fadeInScale {
     from {
         opacity: 0;
-        transform: scale(0.96) translateY(8px);
+        transform: scale(0.95) translateY(-8px);
     }
 
     to {
@@ -105,7 +139,7 @@ img {
 @keyframes slideInRight {
     from {
         opacity: 0;
-        transform: translateX(-12px);
+        transform: translateX(-16px);
     }
 
     to {
@@ -114,15 +148,25 @@ img {
     }
 }
 
+@keyframes shimmer {
+    from {
+        background-position: -200% 0;
+    }
+
+    to {
+        background-position: 200% 0;
+    }
+}
+
 @keyframes glowPulse {
 
     0%,
     100% {
-        box-shadow: 0 0 0 0 var(--accent-glow);
+        box-shadow: 0 0 12px rgba(230, 57, 70, 0.3);
     }
 
     50% {
-        box-shadow: 0 0 12px 3px var(--accent-glow);
+        box-shadow: 0 0 24px rgba(230, 57, 70, 0.6);
     }
 }
 
@@ -131,145 +175,136 @@ img {
     0%,
     100% {
         opacity: 1;
+        transform: scale(1);
     }
 
     50% {
-        opacity: 0.4;
+        opacity: 0.5;
+        transform: scale(0.85);
     }
 }
 
-@keyframes countUp {
-    from {
-        transform: translateY(8px);
-        opacity: 0;
-    }
+@keyframes newBadgePulse {
 
-    to {
-        transform: translateY(0);
-        opacity: 1;
-    }
-}
-
-@keyframes shimmer {
-    0% {
-        background-position: -200% 0;
-    }
-
+    0%,
     100% {
-        background-position: 200% 0;
+        box-shadow: 0 0 0 0 rgba(230, 57, 70, 0.5);
+    }
+
+    50% {
+        box-shadow: 0 0 0 5px rgba(230, 57, 70, 0);
     }
 }
 
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* ── 6. Utility classes ─────────────────────────────────────── */
 .animate-fade-in {
-    animation: fadeIn 0.3s ease both;
+    animation: fadeIn 0.35s ease both;
 }
 
 .animate-fade-in-scale {
-    animation: fadeInScale 0.25s cubic-bezier(0.16, 1, 0.3, 1) both;
+    animation: fadeInScale 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275) both;
 }
 
 .animate-slide-in {
     animation: slideInRight 0.3s ease both;
 }
 
-.animate-live {
-    animation: livePulse 2s ease-in-out infinite;
+.animate-spin {
+    animation: spin 0.8s linear infinite;
 }
 
-.animate-glow {
-    animation: glowPulse 2.5s ease-in-out infinite;
-}
-
-.animate-count {
-    animation: countUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) both;
-}
-
-/* Stagger delays para listas */
-.stagger-1 {
-    animation-delay: 0.05s;
-}
-
-.stagger-2 {
-    animation-delay: 0.1s;
-}
-
-.stagger-3 {
-    animation-delay: 0.15s;
-}
-
-.stagger-4 {
-    animation-delay: 0.2s;
-}
-
-.stagger-5 {
-    animation-delay: 0.25s;
-}
-
-.stagger-6 {
-    animation-delay: 0.3s;
-}
-
-.stagger-7 {
-    animation-delay: 0.35s;
-}
-
-.stagger-8 {
-    animation-delay: 0.4s;
-}
-
-/* ============================================
-   COMPONENTES PREMIUM
-   ============================================ */
-
-/* Glass card */
-.glass-card {
-    background: rgba(13, 13, 20, 0.7);
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
-    border: 1px solid var(--border);
-    border-radius: 16px;
-}
-
-/* Gradient text */
 .gradient-text {
-    background: linear-gradient(135deg, #fff 0%, #e63946 60%, #f4a261 100%);
+    background: linear-gradient(135deg, var(--accent) 0%, var(--gold) 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
 }
 
-/* Shimmer loading */
+/* ── 7. Glass card ──────────────────────────────────────────── */
+.glass-card {
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-card);
+}
+
+/* ── 8. Stat card ───────────────────────────────────────────── */
+.stat-card {
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 18px;
+    transition: border-color 0.2s, transform 0.2s;
+}
+
+.stat-card:hover {
+    border-color: var(--border-bright);
+    transform: translateY(-2px);
+}
+
+/* ── 9. Shimmer loading ─────────────────────────────────────── */
 .shimmer {
-    background: linear-gradient(90deg, var(--bg-elevated) 25%, var(--bg-overlay) 50%, var(--bg-elevated) 75%);
+    background: linear-gradient(90deg,
+            var(--bg-elevated) 25%,
+            var(--bg-overlay) 50%,
+            var(--bg-elevated) 75%);
     background-size: 200% 100%;
-    animation: shimmer 1.5s infinite;
+    animation: shimmer 1.6s infinite;
+    border-radius: var(--radius-sm);
 }
 
-/* Glow borders */
-.glow-red {
-    box-shadow: 0 0 20px var(--accent-glow), inset 0 0 20px rgba(230, 57, 70, 0.03);
+/* ── 10. Table row hover ────────────────────────────────────── */
+.table-row {
+    transition: background 0.12s;
+    cursor: pointer;
+    position: relative;
 }
 
-.glow-gold {
-    box-shadow: 0 0 20px rgba(244, 162, 97, 0.25), inset 0 0 20px rgba(244, 162, 97, 0.03);
+.table-row::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 3px;
+    background: var(--accent);
+    opacity: 0;
+    transition: opacity 0.15s;
+    border-radius: 0 2px 2px 0;
 }
 
-/* Table row hover com glow */
-.table-row-hover {
-    transition: background 0.15s ease, box-shadow 0.15s ease;
-}
-
-.table-row-hover:hover {
+.table-row:hover {
     background: rgba(230, 57, 70, 0.04);
-    box-shadow: inset 3px 0 0 var(--accent);
 }
 
-/* Badge NEW pulsante */
+.table-row:hover::before {
+    opacity: 1;
+}
+
+/* ── 11. Badge NEW ──────────────────────────────────────────── */
 .badge-new {
-    animation: glowPulse 1.5s ease-in-out infinite;
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    padding: 2px 7px;
+    border-radius: 99px;
+    background: rgba(230, 57, 70, 0.12);
+    border: 1px solid rgba(230, 57, 70, 0.3);
+    color: var(--accent);
+    font-size: 9px;
+    font-weight: 800;
+    letter-spacing: 0.6px;
+    animation: newBadgePulse 2s infinite;
+    white-space: nowrap;
 }
 
-/* Botão pill de filtro */
+/* ── 12. Filter pill ────────────────────────────────────────── */
 .filter-pill {
     padding: 6px 14px;
     border-radius: 99px;
@@ -278,98 +313,79 @@ img {
     border: 1px solid var(--border-bright);
     background: transparent;
     color: var(--text-secondary);
-    cursor: pointer;
-    transition: all 0.15s ease;
+    transition: all 0.15s;
     white-space: nowrap;
 }
 
 .filter-pill:hover {
-    border-color: #3a3a58;
-    color: var(--text-primary);
+    border-color: var(--accent);
+    color: var(--accent);
+    background: var(--accent-dim);
 }
 
 .filter-pill.active {
-    background: var(--accent-dim);
+    background: var(--accent);
     border-color: var(--accent);
-    color: var(--accent);
+    color: #fff;
 }
 
-/* Nav link ativo */
+/* ── 13. Nav link ───────────────────────────────────────────── */
 .nav-link {
     display: flex;
     align-items: center;
     gap: 8px;
     padding: 8px 14px;
-    border-radius: 10px;
-    font-size: 14px;
-    font-weight: 500;
-    text-decoration: none;
+    border-radius: var(--radius-sm);
+    font-size: 13px;
+    font-weight: 600;
     color: var(--text-secondary);
-    transition: all 0.15s ease;
-    border: 1px solid transparent;
+    background: transparent;
+    border: none;
+    transition: all 0.15s;
+    white-space: nowrap;
 }
 
 .nav-link:hover {
+    background: rgba(255, 255, 255, 0.05);
     color: var(--text-primary);
-    background: rgba(255, 255, 255, 0.04);
 }
 
 .nav-link.active {
-    color: var(--accent);
     background: var(--accent-dim);
-    border-color: rgba(230, 57, 70, 0.25);
+    color: var(--accent);
 }
 
-/* Stat card */
-.stat-card {
-    background: var(--bg-elevated);
-    border: 1px solid var(--border);
-    border-radius: 14px;
-    padding: 20px;
-    transition: border-color 0.2s ease, transform 0.2s ease;
-}
-
-.stat-card:hover {
-    transform: translateY(-2px);
-}
-
-/* Ranking medal */
-.medal-1 {
-    color: #ffd700;
-    text-shadow: 0 0 12px rgba(255, 215, 0, 0.5);
-}
-
-.medal-2 {
-    color: #c0c0c0;
-    text-shadow: 0 0 8px rgba(192, 192, 192, 0.3);
-}
-
-.medal-3 {
-    color: #cd7f32;
-    text-shadow: 0 0 8px rgba(205, 127, 50, 0.3);
-}
-
-/* Live indicator */
+/* ── 14. Live dot ───────────────────────────────────────────── */
 .live-dot {
     width: 7px;
     height: 7px;
     border-radius: 50%;
-    background: #22c55e;
-    box-shadow: 0 0 6px rgba(34, 197, 94, 0.6);
-    animation: livePulse 2s ease-in-out infinite;
+    background: var(--green);
+    animation: livePulse 1.8s ease-in-out infinite;
+    flex-shrink: 0;
 }
 
-/* Container do Logo */
-.logo-container {
-    background-color: transparent !important;
-    border: none !important;
-    padding: 0;
-    /* Sem padding para não quebrar o layout do header */
+/* ── 15. Icon box ───────────────────────────────────────────── */
+.icon-box {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    border-radius: var(--radius-sm);
+    background: var(--bg-elevated);
+    border: 1px solid var(--border);
+    flex-shrink: 0;
 }
 
-.logo-container img {
-    display: block;
-    margin: 0;
-    max-width: 100%;
-    height: auto;
+/* ── 16. Responsive helpers ─────────────────────────────────── */
+@media (max-width: 768px) {
+    .hide-mobile {
+        display: none !important;
+    }
+}
+
+@media (min-width: 769px) {
+    .show-mobile {
+        display: none !important;
+    }
 }

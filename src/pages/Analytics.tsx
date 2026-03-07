@@ -1,342 +1,288 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { BarChart2, TrendingUp, TrendingDown, Clock, Activity, Package, DollarSign, Layers, RefreshCw } from 'lucide-react';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, AreaChart, Area } from 'recharts';
+import { BarChart2, TrendingUp, TrendingDown, Activity, Package, RefreshCw } from 'lucide-react';
+import {
+    AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid,
+    Tooltip, ResponsiveContainer, Cell,
+} from 'recharts';
 import { supabase } from '../lib/supabase';
-import { formatCurrency } from '../lib/format';
+import { cleanItemName, formatPrice } from '../lib/format';
 
 const SERVER_ID = 'pride';
-const SERVER_NAME = 'Pride';
-const CURRENCY = 'Pride Coin';
 
-interface MarketItem {
-    id: string;
+interface RawItem {
     name: string;
     price: number;
     currency: string;
     timestamp: string;
 }
 
-function normalizeItemName(name: string) {
-    return name.replace(/^\+\d+\s*/, '').trim();
-}
-
 const CustomTooltip = ({ active, payload, label }: any) => {
     if (!active || !payload?.length) return null;
     return (
         <div style={{
-            background: '#0d0d14', border: '1px solid #1e1e30', borderRadius: 12,
-            padding: '10px 14px', fontSize: 12,
+            background: '#0d0d14', border: '1px solid var(--border-bright)',
+            borderRadius: 10, padding: '10px 14px', fontSize: 12,
         }}>
-            <p style={{ color: '#8888aa', margin: '0 0 6px', fontSize: 11 }}>{label}</p>
-            {payload.map((p: any, i: number) => (
-                <p key={i} style={{ color: '#f0f0f8', margin: 0, fontWeight: 700 }}>
-                    <span style={{ color: p.color }}>{p.value}</span>
-                    <span style={{ color: '#4a4a66', marginLeft: 4, fontWeight: 400 }}>{p.name === 'count' ? ' anúncios' : ` ${CURRENCY}`}</span>
-                </p>
-            ))}
+            <p style={{ color: 'var(--text-secondary)', margin: '0 0 4px', fontSize: 11 }}>{label}</p>
+            <p style={{ color: 'var(--gold)', margin: 0, fontWeight: 700, fontSize: 14 }}>
+                {typeof payload[0].value === 'number'
+                    ? Number(payload[0].value).toLocaleString()
+                    : payload[0].value}
+            </p>
         </div>
     );
 };
 
-type TimeFilter = '24h' | '7d' | '30d';
-
 export default function Analytics() {
-    const [items, setItems] = useState<MarketItem[]>([]);
+    const [items, setItems] = useState<RawItem[]>([]);
     const [loading, setLoading] = useState(true);
+    const [refreshing, setRefreshing] = useState(false);
     const [lastRefresh, setLastRefresh] = useState<Date | null>(null);
-    const [timeFilter, setTimeFilter] = useState<TimeFilter>('24h');
 
-    const fetchAll = useCallback(async () => {
-        setLoading(true);
-        const days = timeFilter === '24h' ? 1 : timeFilter === '7d' ? 7 : 30;
-        const fromDate = new Date();
-        fromDate.setDate(fromDate.getDate() - days);
-
+    const fetchData = useCallback(async (silent = false) => {
+        if (!silent) setLoading(true); else setRefreshing(true);
         const { data } = await supabase
             .from('market_items')
-            .select('id, name, price, currency, timestamp')
+            .select('name, price, currency, timestamp')
             .eq('server_id', SERVER_ID)
-            .gte('timestamp', fromDate.toISOString())
             .order('timestamp', { ascending: false })
-            .limit(10000);
-
-        if (data) setItems(data);
+            .limit(1000);
+        if (data) { setItems(data as RawItem[]); setLastRefresh(new Date()); }
         setLoading(false);
-        setLastRefresh(new Date());
-    }, [timeFilter]);
+        setRefreshing(false);
+    }, []);
 
-    useEffect(() => { fetchAll(); }, [fetchAll]);
+    useEffect(() => { fetchData(); }, [fetchData]);
 
-    const stats = useMemo(() => {
+    /* ── KPIs ── */
+    const kpis = useMemo(() => {
         if (!items.length) return null;
-        const now = new Date();
-        const todayItems = items.filter(i => new Date(i.timestamp).toDateString() === now.toDateString());
-        const freq: Record<string, { count: number; prices: number[] }> = {};
-        let totalVolume = 0;
-
-        items.forEach(i => {
-            const k = normalizeItemName(i.name);
-            if (!freq[k]) freq[k] = { count: 0, prices: [] };
-            freq[k].count++;
-            freq[k].prices.push(i.price);
-            totalVolume += i.price;
-        });
-
-        const topItems = Object.entries(freq)
-            .map(([name, v]) => ({ name, count: v.count, avg: Math.round(v.prices.reduce((a, b) => a + b, 0) / v.prices.length) }))
-            .sort((a, b) => b.count - a.count).slice(0, 10);
-
-        const byTime: Record<string, number> = {};
-        let timeData: { time: string; count: number }[] = [];
-
-        if (timeFilter === '24h') {
-            for (let h = 0; h < 24; h++) byTime[h] = 0;
-            items.forEach(i => {
-                const itemDate = new Date(i.timestamp);
-                if (now.getTime() - itemDate.getTime() <= 24 * 60 * 60 * 1000) byTime[itemDate.getHours()]++;
-            });
-            const currentHour = now.getHours();
-            timeData = Array.from({ length: 24 }, (_, i) => {
-                const h = (currentHour - 23 + i + 24) % 24;
-                return { time: `${h}h`, count: byTime[h] };
-            });
-        } else {
-            const days = timeFilter === '7d' ? 7 : 30;
-            for (let d = days - 1; d >= 0; d--) {
-                const dDate = new Date(now);
-                dDate.setDate(dDate.getDate() - d);
-                byTime[dDate.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })] = 0;
-            }
-            items.forEach(i => {
-                const dateStr = new Date(i.timestamp).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
-                if (byTime[dateStr] !== undefined) byTime[dateStr]++;
-            });
-            timeData = Object.entries(byTime).map(([time, count]) => ({ time, count }));
-        }
-
-        const mostExpensive = [...items].sort((a, b) => b.price - a.price).slice(0, 8);
-        const cheapest = [...items].sort((a, b) => a.price - b.price).slice(0, 8);
-
+        const prices = items.map(i => i.price);
         return {
-            totalItems: items.length,
-            todayCount: todayItems.length,
-            uniqueCount: Object.keys(freq).length,
-            avgPrice: totalVolume / items.length,
-            totalVolume,
-            topItems,
-            timeData,
-            mostExpensive,
-            cheapest,
+            total: items.length,
+            unique: new Set(items.map(i => cleanItemName(i.name).toLowerCase())).size,
+            max: Math.max(...prices),
+            avg: prices.reduce((s, p) => s + p, 0) / prices.length,
+            min: Math.min(...prices),
         };
     }, [items]);
 
-    const fmt = (iso: string) => new Date(iso).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+    /* ── Atividade por hora ── */
+    const hourlyData = useMemo(() => {
+        const map: Record<string, number> = {};
+        for (const it of items) {
+            const h = new Date(it.timestamp).getHours();
+            const key = `${String(h).padStart(2, '0')}h`;
+            map[key] = (map[key] || 0) + 1;
+        }
+        return Array.from({ length: 24 }, (_, h) => {
+            const key = `${String(h).padStart(2, '0')}h`;
+            return { hour: key, listagens: map[key] || 0 };
+        });
+    }, [items]);
+
+    /* ── Top itens por volume ── */
+    const topItems = useMemo(() => {
+        const counts: Record<string, number> = {};
+        for (const it of items) {
+            const k = cleanItemName(it.name);
+            counts[k] = (counts[k] || 0) + 1;
+        }
+        return Object.entries(counts)
+            .map(([name, count]) => ({ name: name.length > 22 ? name.slice(0, 20) + '…' : name, count }))
+            .sort((a, b) => b.count - a.count)
+            .slice(0, 8);
+    }, [items]);
+
+    /* ── High ticket ── */
+    const highTicket = useMemo(() => {
+        const seen = new Set<string>();
+        return items
+            .filter(i => { const k = cleanItemName(i.name).toLowerCase(); if (seen.has(k)) return false; seen.add(k); return true; })
+            .sort((a, b) => b.price - a.price)
+            .slice(0, 5);
+    }, [items]);
+
+    /* ── Oportunidades (abaixo da média) ── */
+    const opportunities = useMemo(() => {
+        if (!kpis) return [];
+        return items
+            .filter(i => i.price < kpis.avg * 0.7)
+            .sort((a, b) => a.price - b.price)
+            .slice(0, 5);
+    }, [items, kpis]);
+
+    const BAR_COLORS = ['#e63946', '#f4a261', '#a78bfa', '#60a5fa', '#22c55e', '#fb923c', '#f472b6', '#34d399'];
 
     if (loading) {
         return (
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: 320, gap: 16 }}>
-                <div style={{
-                    width: 56, height: 56, borderRadius: 16,
-                    background: 'rgba(230,57,70,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                }}>
-                    <Activity size={24} color="#e63946" style={{ animation: 'livePulse 1.5s ease-in-out infinite' }} />
-                </div>
-                <p style={{ color: 'var(--text-secondary)', margin: 0, fontSize: 14 }}>Analisando dados do {SERVER_NAME}...</p>
-            </div>
-        );
-    }
-
-    if (!stats) {
-        return (
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: 320 }}>
-                <Package size={48} style={{ color: 'var(--text-muted)', opacity: 0.3, marginBottom: 12 }} />
-                <p style={{ color: 'var(--text-muted)' }}>Nenhum dado suficiente para o {SERVER_NAME} ainda.</p>
-            </div>
-        );
-    }
-
-    const kpiCards = [
-        { label: 'Volume Hoje', value: stats.todayCount.toLocaleString(), icon: Activity, color: '#e63946', bg: 'rgba(230,57,70,0.1)', border: 'rgba(230,57,70,0.2)' },
-        { label: 'Itens Únicos', value: stats.uniqueCount.toLocaleString(), icon: Layers, color: '#22d3ee', bg: 'rgba(34,211,238,0.08)', border: 'rgba(34,211,238,0.18)' },
-        { label: 'Preço Médio', value: `${stats.avgPrice.toLocaleString('pt-BR', { maximumFractionDigits: 2 })}`, icon: TrendingUp, color: '#f4a261', bg: 'rgba(244,162,97,0.08)', border: 'rgba(244,162,97,0.18)', sub: CURRENCY },
-        { label: 'Vol. Movimentado', value: stats.totalVolume > 1e9 ? `${(stats.totalVolume / 1e9).toFixed(2)}B` : stats.totalVolume > 1e6 ? `${(stats.totalVolume / 1e6).toFixed(2)}M` : stats.totalVolume.toFixed(1), icon: DollarSign, color: '#a78bfa', bg: 'rgba(167,139,250,0.08)', border: 'rgba(167,139,250,0.18)', sub: CURRENCY },
-    ];
-
-    return (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }} className="animate-fade-in">
-
-            {/* Header */}
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
-                <div>
-                    <h1 style={{ margin: 0, fontSize: 26, fontWeight: 800, letterSpacing: '-0.8px', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: 10 }}>
-                        <div style={{ width: 36, height: 36, borderRadius: 10, background: 'rgba(230,57,70,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                            <BarChart2 size={18} color="#e63946" />
-                        </div>
-                        Analytics
-                    </h1>
-                    <p style={{ margin: '6px 0 0', fontSize: 13, color: 'var(--text-secondary)' }}>
-                        Visão detalhada do mercado <strong style={{ color: 'var(--text-primary)' }}>{SERVER_NAME}</strong> · {stats.totalItems} amostras
-                    </p>
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-                    <div style={{ display: 'flex', background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: 9, padding: 2 }}>
-                        {(['24h', '7d', '30d'] as TimeFilter[]).map(f => (
-                            <button key={f}
-                                onClick={() => setTimeFilter(f)}
-                                style={{
-                                    padding: '5px 12px', fontSize: 11, fontWeight: 600, borderRadius: 7, border: 'none', cursor: 'pointer',
-                                    background: timeFilter === f ? 'var(--accent-dim)' : 'transparent',
-                                    color: timeFilter === f ? 'var(--accent)' : 'var(--text-muted)',
-                                    transition: 'all 0.15s'
-                                }}>
-                                {f.toUpperCase()}
-                            </button>
-                        ))}
-                    </div>
-                    {lastRefresh && (
-                        <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>
-                            {lastRefresh.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
-                        </span>
-                    )}
-                    <button
-                        onClick={fetchAll}
-                        style={{
-                            display: 'flex', alignItems: 'center', gap: 6,
-                            padding: '7px 14px', borderRadius: 9, fontSize: 12, fontWeight: 600,
-                            background: 'var(--bg-elevated)', border: '1px solid var(--border)',
-                            color: 'var(--text-secondary)', cursor: 'pointer', fontFamily: 'var(--font-sans)',
-                            transition: 'all 0.15s',
-                        }}
-                        onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = 'var(--border-bright)'; }}
-                        onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = 'var(--border)'; }}
-                    >
-                        <RefreshCw size={12} /> Atualizar
-                    </button>
-                </div>
-            </div>
-
-            {/* KPI Cards */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 14 }}>
-                {kpiCards.map((card, i) => (
-                    <div key={card.label} className={`stat-card animate-count stagger-${i + 1}`} style={{ borderColor: card.border }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
-                            <div style={{ width: 34, height: 34, borderRadius: 9, background: card.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                                <card.icon size={16} color={card.color} />
-                            </div>
-                            <h3 style={{ margin: 0, fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)' }}>{card.label}</h3>
-                        </div>
-                        <p style={{ margin: 0, fontSize: 22, fontWeight: 800, color: 'var(--text-primary)', letterSpacing: '-0.5px' }}>
-                            {card.value}
-                            {card.sub && <span style={{ fontSize: 11, fontWeight: 400, color: 'var(--text-muted)', marginLeft: 5 }}>{card.sub}</span>}
-                        </p>
-                    </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                {Array.from({ length: 4 }).map((_, i) => (
+                    <div key={i} className="shimmer" style={{ height: 100, borderRadius: 16 }} />
                 ))}
             </div>
+        );
+    }
 
-            {/* Charts */}
+    return (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }} className="animate-fade-in">
+
+            {/* Header */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div>
+                    <h1 style={{ margin: 0, fontSize: 22, fontWeight: 800, letterSpacing: '-0.5px' }}>Analytics</h1>
+                    {lastRefresh && (
+                        <p style={{ margin: '4px 0 0', fontSize: 11, color: 'var(--text-muted)' }}>
+                            Atualizado às {lastRefresh.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                        </p>
+                    )}
+                </div>
+                <button
+                    onClick={() => fetchData(true)}
+                    style={{
+                        display: 'flex', alignItems: 'center', gap: 6,
+                        padding: '8px 14px', borderRadius: 8, fontSize: 12, fontWeight: 600,
+                        background: 'var(--bg-elevated)', border: '1px solid var(--border-bright)',
+                        color: 'var(--text-secondary)', fontFamily: 'var(--font-sans)', transition: 'all 0.15s',
+                    }}
+                    onMouseEnter={e => { (e.currentTarget).style.borderColor = 'var(--accent)'; (e.currentTarget).style.color = 'var(--accent)'; }}
+                    onMouseLeave={e => { (e.currentTarget).style.borderColor = 'var(--border-bright)'; (e.currentTarget).style.color = 'var(--text-secondary)'; }}
+                >
+                    <RefreshCw size={13} className={refreshing ? 'animate-spin' : ''} />
+                    Atualizar
+                </button>
+            </div>
+
+            {/* KPI cards */}
+            {kpis && (
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 12 }}>
+                    {[
+                        { label: 'Total listagens', value: kpis.total.toLocaleString(), icon: Package, color: 'var(--accent)', border: 'rgba(230,57,70,0.25)', bg: 'rgba(230,57,70,0.08)' },
+                        { label: 'Itens únicos', value: kpis.unique.toLocaleString(), icon: Activity, color: 'var(--blue)', border: 'rgba(96,165,250,0.25)', bg: 'rgba(96,165,250,0.08)' },
+                        { label: 'Preço mais alto', value: `${formatPrice(kpis.max)} PC`, icon: TrendingUp, color: 'var(--gold)', border: 'rgba(244,162,97,0.25)', bg: 'rgba(244,162,97,0.08)' },
+                        { label: 'Preço médio', value: `${formatPrice(kpis.avg)} PC`, icon: BarChart2, color: 'var(--purple)', border: 'rgba(167,139,250,0.25)', bg: 'rgba(167,139,250,0.08)' },
+                    ].map(c => (
+                        <div key={c.label} className="stat-card" style={{ borderColor: c.border, transition: 'border-color 0.2s, transform 0.2s, box-shadow 0.2s' }}
+                            onMouseEnter={e => { (e.currentTarget as HTMLElement).style.boxShadow = `0 0 24px ${c.bg}`; }}
+                            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.boxShadow = 'none'; }}>
+                            <div style={{ width: 34, height: 34, borderRadius: 9, background: c.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 12 }}>
+                                <c.icon size={16} color={c.color} />
+                            </div>
+                            <p style={{ margin: 0, fontSize: 11, color: 'var(--text-secondary)' }}>{c.label}</p>
+                            <p style={{ margin: '5px 0 0', fontSize: 16, fontWeight: 800, color: 'var(--text-primary)', letterSpacing: '-0.3px' }}>{c.value}</p>
+                        </div>
+                    ))}
+                </div>
+            )}
+
+            {/* Charts row */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-                {/* Activity chart */}
-                <div className="glass-card" style={{ padding: 22 }}>
-                    <div style={{ marginBottom: 20 }}>
-                        <h2 style={{ margin: 0, fontSize: 14, fontWeight: 700, color: 'var(--text-primary)' }}>Atividade ao Longo do Tempo</h2>
-                        <p style={{ margin: '4px 0 0', fontSize: 11, color: 'var(--text-muted)' }}>Volume de anúncios postados ({timeFilter.toUpperCase()})</p>
-                    </div>
-                    <ResponsiveContainer width="100%" height={220}>
-                        <AreaChart data={stats.timeData} margin={{ left: -20, right: 8, top: 8, bottom: 0 }}>
+
+                {/* Hourly activity */}
+                <div className="glass-card" style={{ padding: 20 }}>
+                    <h2 style={{ margin: '0 0 16px', fontSize: 13, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <Activity size={14} color="var(--accent)" /> Atividade por Hora
+                    </h2>
+                    <ResponsiveContainer width="100%" height={180}>
+                        <AreaChart data={hourlyData} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
                             <defs>
-                                <linearGradient id="gradActivity" x1="0" y1="0" x2="0" y2="1">
-                                    <stop offset="5%" stopColor="#e63946" stopOpacity={0.35} />
-                                    <stop offset="95%" stopColor="#e63946" stopOpacity={0} />
+                                <linearGradient id="actGrad" x1="0" y1="0" x2="0" y2="1">
+                                    <stop offset="0%" stopColor="var(--accent)" stopOpacity={0.3} />
+                                    <stop offset="100%" stopColor="var(--accent)" stopOpacity={0} />
                                 </linearGradient>
                             </defs>
-                            <CartesianGrid strokeDasharray="3 3" stroke="#1a1a2a" vertical={false} />
-                            <XAxis dataKey="time" tick={{ fill: '#4a4a66', fontSize: 10 }} tickLine={false} axisLine={false} interval={timeFilter === '30d' ? 4 : 2} />
-                            <YAxis tick={{ fill: '#4a4a66', fontSize: 10 }} tickLine={false} axisLine={false} />
-                            <RechartsTooltip content={<CustomTooltip />} />
-                            <Area type="monotone" dataKey="count" stroke="#e63946" strokeWidth={2.5} fillOpacity={1} fill="url(#gradActivity)" dot={false} activeDot={{ r: 4, fill: '#e63946', strokeWidth: 0 }} />
+                            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" />
+                            <XAxis dataKey="hour" tick={{ fill: '#44445a', fontSize: 9 }} tickLine={false} axisLine={false} interval={3} />
+                            <YAxis tick={{ fill: '#44445a', fontSize: 9 }} tickLine={false} axisLine={false} />
+                            <Tooltip content={<CustomTooltip />} />
+                            <Area type="monotone" dataKey="listagens" stroke="var(--accent)" strokeWidth={2} fill="url(#actGrad)" dot={false} />
                         </AreaChart>
                     </ResponsiveContainer>
                 </div>
 
-                {/* Top items chart */}
-                <div className="glass-card" style={{ padding: 22 }}>
-                    <div style={{ marginBottom: 20 }}>
-                        <h2 style={{ margin: 0, fontSize: 14, fontWeight: 700, color: 'var(--text-primary)' }}>Itens com Maior Liquidez</h2>
-                        <p style={{ margin: '4px 0 0', fontSize: 11, color: 'var(--text-muted)' }}>Top 10 por número de listagens</p>
-                    </div>
-                    <ResponsiveContainer width="100%" height={220}>
-                        <BarChart data={stats.topItems} layout="vertical" margin={{ left: 0, right: 8, top: 0, bottom: 0 }}>
-                            <CartesianGrid strokeDasharray="3 3" stroke="#1a1a2a" horizontal={false} />
-                            <XAxis type="number" tick={{ fill: '#4a4a66', fontSize: 10 }} tickLine={false} axisLine={false} />
-                            <YAxis type="category" dataKey="name" width={120} tick={{ fill: '#8888aa', fontSize: 10 }} tickLine={false} axisLine={false}
-                                tickFormatter={v => v.length > 16 ? v.slice(0, 16) + '…' : v} />
-                            <RechartsTooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(255,255,255,0.03)' }} />
-                            <Bar dataKey="count" fill="#e63946" radius={[0, 5, 5, 0]} barSize={14} opacity={0.85} />
+                {/* Top items */}
+                <div className="glass-card" style={{ padding: 20 }}>
+                    <h2 style={{ margin: '0 0 16px', fontSize: 13, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <TrendingUp size={14} color="var(--gold)" /> Top Itens (Volume)
+                    </h2>
+                    <ResponsiveContainer width="100%" height={180}>
+                        <BarChart data={topItems} margin={{ top: 4, right: 4, left: -20, bottom: 0 }} layout="vertical">
+                            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" horizontal={false} />
+                            <XAxis type="number" tick={{ fill: '#44445a', fontSize: 9 }} tickLine={false} axisLine={false} />
+                            <YAxis type="category" dataKey="name" tick={{ fill: '#8888aa', fontSize: 10 }} tickLine={false} axisLine={false} width={90} />
+                            <Tooltip content={<CustomTooltip />} />
+                            <Bar dataKey="count" radius={[0, 4, 4, 0]}>
+                                {topItems.map((_, i) => <Cell key={i} fill={BAR_COLORS[i % BAR_COLORS.length]} />)}
+                            </Bar>
                         </BarChart>
                     </ResponsiveContainer>
                 </div>
             </div>
 
-            {/* High & Low ticket */}
+            {/* High ticket + Oportunidades */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-                {[
-                    { title: 'High-Ticket', subtitle: 'Itens com maior preço', icon: TrendingUp, color: '#22c55e', data: stats.mostExpensive, priceColor: '#22c55e' },
-                    { title: 'Oportunidades', subtitle: 'Itens com menor preço', icon: TrendingDown, color: '#e63946', data: stats.cheapest, priceColor: '#e63946' },
-                ].map(section => (
-                    <div key={section.title} className="glass-card" style={{ overflow: 'hidden' }}>
-                        <div style={{ padding: '14px 18px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 8 }}>
-                            <section.icon size={15} color={section.color} />
-                            <div>
-                                <h2 style={{ margin: 0, fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>{section.title}</h2>
-                                <p style={{ margin: 0, fontSize: 10, color: 'var(--text-muted)' }}>{section.subtitle}</p>
-                            </div>
-                        </div>
-                        <div style={{ padding: '6px 8px' }}>
-                            {section.data.map((item, i) => (
-                                <div key={item.id + i}
-                                    style={{
-                                        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                                        padding: '9px 10px', borderRadius: 8,
-                                        transition: 'background 0.15s',
-                                    }}
-                                    onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.03)'; }}
-                                    onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
-                                >
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0, flex: 1 }}>
-                                        <span style={{ fontSize: 11, fontWeight: 800, color: 'var(--text-muted)', width: 18, flexShrink: 0 }}>{i + 1}.</span>
-                                        <div style={{ minWidth: 0 }}>
-                                            <p style={{ margin: 0, fontSize: 12, fontWeight: 600, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.name}</p>
-                                            <p style={{ margin: '2px 0 0', fontSize: 10, color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: 4 }}>
-                                                <Clock size={9} /> {fmt(item.timestamp)}
-                                            </p>
-                                        </div>
-                                    </div>
-                                    <div style={{ textAlign: 'right', marginLeft: 12, flexShrink: 0 }}>
-                                        <span style={{ fontWeight: 800, fontSize: 12, color: section.priceColor, display: 'block' }}>
-                                            {formatCurrency(item.price, item.currency)}
-                                        </span>
-                                        <span style={{ fontSize: 9, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>{item.currency || CURRENCY}</span>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
+
+                {/* High ticket */}
+                <div className="glass-card" style={{ overflow: 'hidden' }}>
+                    <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <TrendingUp size={14} color="var(--gold)" />
+                        <h2 style={{ margin: 0, fontSize: 13, fontWeight: 700 }}>High-Ticket</h2>
                     </div>
-                ))}
+                    {highTicket.map((item, i) => (
+                        <div key={i} style={{
+                            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                            padding: '11px 16px', borderBottom: '1px solid rgba(255,255,255,0.03)',
+                            transition: 'background 0.12s',
+                        }}
+                            onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.03)'; }}
+                            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'transparent'; }}>
+                            <span style={{ fontSize: 12, fontWeight: 600, color: item.name.startsWith('+') ? 'var(--gold)' : 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '55%' }}>
+                                {cleanItemName(item.name)}
+                            </span>
+                            <span style={{ fontSize: 13, fontWeight: 800, color: 'var(--gold)', whiteSpace: 'nowrap' }}>
+                                {formatPrice(item.price)} <span style={{ fontSize: 9, color: 'var(--text-muted)', fontWeight: 400 }}>PC</span>
+                            </span>
+                        </div>
+                    ))}
+                </div>
+
+                {/* Oportunidades */}
+                <div className="glass-card" style={{ overflow: 'hidden' }}>
+                    <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <TrendingDown size={14} color="var(--green)" />
+                        <h2 style={{ margin: 0, fontSize: 13, fontWeight: 700 }}>Oportunidades</h2>
+                        <span style={{ fontSize: 10, color: 'var(--text-muted)', marginLeft: 4 }}>&lt; 70% da média</span>
+                    </div>
+                    {opportunities.length === 0
+                        ? <div style={{ padding: 24, textAlign: 'center', color: 'var(--text-muted)', fontSize: 12 }}>Nenhuma oportunidade abaixo de 70% da média</div>
+                        : opportunities.map((item, i) => (
+                            <div key={i} style={{
+                                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                                padding: '11px 16px', borderBottom: '1px solid rgba(255,255,255,0.03)',
+                                transition: 'background 0.12s',
+                            }}
+                                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(34,197,94,0.03)'; }}
+                                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'transparent'; }}>
+                                <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '55%' }}>
+                                    {cleanItemName(item.name)}
+                                </span>
+                                <span style={{ fontSize: 13, fontWeight: 800, color: 'var(--green)', whiteSpace: 'nowrap' }}>
+                                    {formatPrice(item.price)} <span style={{ fontSize: 9, color: 'var(--text-muted)', fontWeight: 400 }}>PC</span>
+                                </span>
+                            </div>
+                        ))}
+                </div>
             </div>
 
-            {/* Responsive */}
+            {/* Responsive fix */}
             <style>{`
-                @media (max-width: 900px) {
-                    div[style*="grid-template-columns: repeat(4"] {
-                        grid-template-columns: repeat(2, 1fr) !important;
-                    }
-                }
-                @media (max-width: 768px) {
-                    div[style*="grid-template-columns: 1fr 1fr"] {
-                        grid-template-columns: 1fr !important;
-                    }
-                }
-            `}</style>
+        @media (max-width: 768px) {
+          div[style*="gridTemplateColumns: 'repeat(4,1fr)'"],
+          div[style*="gridTemplateColumns: '1fr 1fr'"] {
+            grid-template-columns: 1fr !important;
+          }
+        }
+      `}</style>
         </div>
     );
 }

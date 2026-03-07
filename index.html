@@ -1,70 +1,24 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="pt-BR">
 
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-
-  <script
-    data-cookieconsent="ignore">    window.dataLayer = window.dataLayer || []; function gtag() { dataLayer.push(arguments); } gtag("consent", "default", { ad_personalization: "denied", ad_storage: "denied", ad_user_data: "denied", analytics_storage: "denied", functionality_storage: "denied", personalization_storage: "denied", security_storage: "granted", wait_for_update: 500, }); gtag("set", "ads_data_redaction", true); gtag("set", "url_passthrough", false);</script>
-
-  <script id="Cookiebot" src="https://consent.cookiebot.com/uc.js" data-cbid="507303a1-7f06-484d-beb6-478ce3b1846a"
-    data-blockingmode="auto" type="text/javascript"></script>
-
-  <!-- Google Tag Manager -->
-  <script>(function (w, d, s, l, i) {
-      w[l] = w[l] || []; w[l].push({
-        'gtm.start':
-          new Date().getTime(), event: 'gtm.js'
-      }); var f = d.getElementsByTagName(s)[0],
-        j = d.createElement(s), dl = l != 'dataLayer' ? '&l=' + l : ''; j.async = true; j.src =
-          'https://www.googletagmanager.com/gtm.js?id=' + i + dl; f.parentNode.insertBefore(j, f);
-    })(window, document, 'script', 'dataLayer', 'GTM-KP9PHV4Z');</script>
-  <!-- End Google Tag Manager -->
-
-  <meta name="description"
-    content="PrideMarket — Acompanhe preços, tendências e oportunidades do mercado do servidor Pride em tempo real." />
   <meta name="theme-color" content="#050508" />
-  <meta property="og:title" content="PrideMarket — Lineage 2" />
-  <meta property="og:description"
-    content="Monitore o mercado do Pride em tempo real. Histórico de preços, analytics e ranking de itens." />
+  <meta name="description"
+    content="PrideMarket — Monitor de mercado em tempo real para o servidor Pride de Lineage 2 Essence." />
+  <meta property="og:title" content="PrideMarket" />
+  <meta property="og:description" content="Acompanhe preços e listagens do mercado Pride em tempo real." />
   <meta property="og:type" content="website" />
-  <title>PrideMarket — Lineage 2 Market Tracker</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap"
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap"
     rel="stylesheet" />
+  <link rel="icon" type="image/png" href="/Logo.png" />
+  <title>PrideMarket</title>
 </head>
 
 <body>
-  <!-- Google Tag Manager (noscript) -->
-  <noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-KP9PHV4Z" height="0" width="0"
-      style="display:none;visibility:hidden"></iframe></noscript>
-  <!-- End Google Tag Manager (noscript) -->
-
-  <!-- Script Anti-DevTools (Dificulta Botão Direito e F12) -->
-  <script>
-    document.addEventListener('contextmenu', event => event.preventDefault());
-
-    window.addEventListener('keydown', function (e) {
-      // Bloqueia F12
-      if (e.key === 'F12') {
-        e.preventDefault();
-      }
-      // Bloqueia Ctrl+Shift+I (Abre Ferramentas de Dev) / Cmd+Option+I (Mac)
-      if ((e.ctrlKey && e.shiftKey && e.key === 'I') || (e.ctrlKey && e.shiftKey && e.key === 'i') || (e.metaKey && e.altKey && e.key === 'I') || (e.metaKey && e.altKey && e.key === 'i')) {
-        e.preventDefault();
-      }
-      // Bloqueia Ctrl+Shift+J (Abre Console) / Cmd+Option+J (Mac)
-      if ((e.ctrlKey && e.shiftKey && e.key === 'J') || (e.ctrlKey && e.shiftKey && e.key === 'j') || (e.metaKey && e.altKey && e.key === 'J') || (e.metaKey && e.altKey && e.key === 'j')) {
-        e.preventDefault();
-      }
-      // Bloqueia Ctrl+U (Ver Código Fonte) / Cmd+U (Mac)
-      if ((e.ctrlKey && e.key === 'U') || (e.ctrlKey && e.key === 'u') || (e.metaKey && e.key === 'U') || (e.metaKey && e.key === 'u')) {
-        e.preventDefault();
-      }
-    });
-  </script>
   <div id="root"></div>
   <script type="module" src="/src/main.tsx"></script>
 </body>
