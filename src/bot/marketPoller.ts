@@ -2,18 +2,15 @@ import 'dotenv/config';
 import { createClient } from '@supabase/supabase-js';
 import { SERVERS } from '../config/servers';
 
-// Suporte a DISCORD_USER_TOKEN (conta pessoal) ou DISCORD_BOT_TOKEN (bot oficial)
-// IMPORTANTE: User tokens NAO usam prefixo "Bot " - apenas bots oficiais usam
-const USER_TOKEN = process.env.DISCORD_USER_TOKEN || process.env.DISCORD_BOT_TOKEN || '';
-const AUTH_HEADER = USER_TOKEN; // Sem nenhum prefixo para user tokens
-
+// EXACTLY as in the original L2MarketTracker - user token, no "Bot " prefix
+const USER_TOKEN = process.env.DISCORD_USER_TOKEN || '';
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL || 'https://mgylypvmgjebvpxhlmly.supabase.co';
 const SUPABASE_KEY = process.env.VITE_SUPABASE_ANON_KEY || 'sb_publishable_RG-4on-iquEBjcvHD-ZAMw_SqZTkHTS';
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
 const POLL_INTERVAL_MS = 5000; // 5 seconds
 
-// Armazena o ultimo ID lido por servidor
+// Armazena o state do ultimo ID lido por servidor { 'pride': '123..' }
 let lastMessageIds: Record<string, string | null> = {};
 
 function guessIconUrl(itemName: string): string {
@@ -29,6 +26,7 @@ function guessIconUrl(itemName: string): string {
   return 'https://l2db.info/icon/weapon_the_sword_of_hero_i00.png';
 }
 
+// Remove Discord custom emojis like <:zcoin:1234> or <zcoin1234>
 function cleanEmojis(text: string): string {
   return text
     .replace(/<:[^:]+:\d+>/g, '')
@@ -37,45 +35,51 @@ function cleanEmojis(text: string): string {
     .trim();
 }
 
-function parsePriceStr(valStr: string, serverId: string): number {
-  if (serverId === 'pride') {
-    // Pride: "10.000" significa 10 PrideCoins (3 casas decimais fixas)
-    const normalized = valStr.replace(/,/g, '.');
-    const parts = normalized.split('.');
-    if (parts.length > 2) {
-      // 1.000.000 → divide por 1000
-      const rawNum = parseInt(normalized.replace(/\./g, ''));
-      return rawNum / 1000;
-    }
-    return parseFloat(normalized);
-  } else {
-    // ZGaming: "15,000" significa 15000 zCoin
-    return parseFloat(valStr.replace(/,/g, ''));
-  }
-}
-
+// Parse price and name from Discord message (embed or plain text)
 function parseMessage(msg: any, serverId: string): { name: string; price: number; currency: string; iconUrl?: string } | null {
+  // Helper para converter string de preco dependendo do servidor
+  const parsePriceStr = (valStr: string, sId: string) => {
+    // Pride: "10.000" significa 10 PrideCoins (3 casas decimais)
+    if (sId === 'pride') {
+      const normalized = valStr.replace(/,/g, '.');
+      const parts = normalized.split('.');
+      if (parts.length > 2) {
+        const rawNum = parseInt(normalized.replace(/\./g, ''));
+        return rawNum / 1000;
+      }
+      return parseFloat(normalized);
+    } else {
+      // ZGaming: remove todas as virgulas de milhares
+      return parseFloat(valStr.replace(/,/g, ''));
+    }
+  };
+
   if (msg.embeds && msg.embeds.length > 0) {
     const embed = msg.embeds[0];
 
-    console.log(`[${serverId.toUpperCase()} Embed]`, JSON.stringify({
-      author: embed.author?.name,
+    // Log embed structure
+    console.log('[Embed]', JSON.stringify({
+      author: embed.author,
       title: embed.title,
-      description: embed.description?.slice(0, 200),
+      description: embed.description?.slice(0, 150),
+      thumbnail: embed.thumbnail,
+      image: embed.image,
       fields: embed.fields,
-      thumbnail: embed.thumbnail?.url,
     }, null, 2));
 
     // 1. Item name: author.name > title > field > description
     let itemName = '';
     if (embed.author?.name) {
       itemName = cleanEmojis(embed.author.name)
-        .replace(/\s*was added on the market\.?\s*/gi, '').trim();
+        .replace(/\s*was added on the market\.?\s*/gi, '')
+        .trim();
     } else if (embed.title) {
       itemName = cleanEmojis(embed.title)
-        .replace(/\s*was added on the market\.?\s*/gi, '').trim();
+        .replace(/\s*was added on the market\.?\s*/gi, '')
+        .trim();
     }
 
+    // 2. Item name from specific field
     if (!itemName && embed.fields) {
       const itemField = embed.fields.find((f: any) =>
         /^(item|name|nome|produto|listing)$/i.test(f.name.trim())
@@ -83,15 +87,16 @@ function parseMessage(msg: any, serverId: string): { name: string; price: number
       if (itemField) itemName = cleanEmojis(itemField.value);
     }
 
+    // 3. Item name from first line of description
     if (!itemName && embed.description) {
       itemName = cleanEmojis(embed.description.split('\n')[0])
-        .replace(/\s*was added on the market\.?\s*/gi, '').trim();
+        .replace(/\s*was added on the market\.?\s*/gi, '')
+        .trim();
     }
 
-    // Price
+    // 4. Price from "Price" field
     let price = 0;
     let currency = serverId === 'pride' ? 'Pride Coin' : 'zCoin';
-
     if (embed.fields) {
       const priceField = embed.fields.find((f: any) =>
         /price|preco|valor|cost|amount/i.test(f.name)
@@ -103,12 +108,11 @@ function parseMessage(msg: any, serverId: string): { name: string; price: number
           price = parsePriceStr(pm[1], serverId);
           if (priceField.value.toLowerCase().includes('adena')) currency = 'Adena';
           else if (priceField.value.toLowerCase().includes('pride')) currency = 'Pride Coin';
-          else if (priceField.value.toLowerCase().includes('zcoin')) currency = 'zCoin';
         }
       }
     }
 
-    // Price from description: "Price: 999.999 Pride Coin"
+    // 5. Price from description text (Pride Format: "Price: 999.999 Pride Coin")
     if (!price && embed.description) {
       const descMatch = cleanEmojis(embed.description).match(/Price:\s*(\d+(?:[,.]\d+)*)\s*(Pride Coin|zCoin|Adena)/i);
       if (descMatch) {
@@ -117,7 +121,7 @@ function parseMessage(msg: any, serverId: string): { name: string; price: number
       }
     }
 
-    // Fallback: any number in the embed
+    // 6. Price from full text fallback
     if (!price) {
       const fullText = cleanEmojis([
         embed.title || '',
@@ -146,13 +150,24 @@ function parseMessage(msg: any, serverId: string): { name: string; price: number
         currency: match[3].toLowerCase().includes('pride') ? 'Pride Coin' : match[3].toLowerCase() === 'adena' ? 'Adena' : 'zCoin',
       };
     }
+    const pm = text.match(/(\d+(?:[,.]\d+)*)\s*(zcoin|adena|zc|pride|pride coin)/i);
+    if (pm) {
+      const namePart = cleanEmojis(text.split(pm[0])[0]).replace(/[-:,]$/, '').trim();
+      if (namePart) {
+        return {
+          name: namePart,
+          price: parsePriceStr(pm[1], serverId),
+          currency: pm[2].toLowerCase().includes('pride') ? 'Pride Coin' : pm[2].toLowerCase() === 'adena' ? 'Adena' : 'zCoin',
+        };
+      }
+    }
   }
 
   return null;
 }
 
 async function pollMessagesForServer(server: { id: string, channelId: string, name: string }) {
-  if (!AUTH_HEADER) return;
+  if (!USER_TOKEN) return;
 
   const lastId = lastMessageIds[server.id];
   const url = `https://discord.com/api/v10/channels/${server.channelId}/messages?limit=20${lastId ? `&after=${lastId}` : ''}`;
@@ -160,52 +175,39 @@ async function pollMessagesForServer(server: { id: string, channelId: string, na
   try {
     const res = await fetch(url, {
       headers: {
-        Authorization: AUTH_HEADER,
+        Authorization: USER_TOKEN, // user token (no "Bot " prefix)
         'Content-Type': 'application/json',
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) discord/1.0.9030 Chrome/120.0.6099.291 Electron/28.2.10 Safari/537.36',
       },
     });
 
     if (!res.ok) {
       if (res.status === 401) {
-        console.error(`❌ L2 Poller [${server.name}]: Token inválido (401). Verifique DISCORD_USER_TOKEN no Railway.`);
+        console.error('❌ L2 Poller: Invalid user token (401). Check DISCORD_USER_TOKEN in .env');
       } else if (res.status === 403) {
-        console.error(`❌ L2 Poller [${server.name}]: Sem acesso ao canal (403). A conta não tem permissão de leitura no canal.`);
-      } else if (res.status === 429) {
-        console.warn(`⚠️ L2 Poller [${server.name}]: Rate limited (429). Aguardando...`);
+        console.error(`❌ L2 Poller: No access to channel (403). Cannot access ${server.name} channel.`);
       } else {
-        console.error(`❌ L2 Poller [${server.name}]: Erro API Discord ${res.status}`);
+        console.error(`❌ L2 Poller: Discord API error ${res.status} on ${server.name}`);
       }
       return;
     }
 
     const messages: any[] = await res.json();
+
     if (!Array.isArray(messages) || messages.length === 0) return;
 
-    // Discord retorna do mais recente pro mais antigo — invertemos
+    // Discord returns newest first — reverse to process oldest first
     const sorted = [...messages].reverse();
+
+    // Update lastMessageId to the newest message
     lastMessageIds[server.id] = messages[0].id;
 
     let newCount = 0;
     for (const msg of sorted) {
-      // Aceita bots E webhooks (ex: Pride Marketplace APP)
-      const isBot = msg.author?.bot;
-      const isWebhook = !!msg.webhook_id;
-
-      if (!isBot && !isWebhook) {
-        console.log(`[${server.name}] Ignorando mensagem de usuario normal: ${msg.author?.username}`);
-        continue;
-      }
-
-      console.log(`[${server.name}] Processando: ${msg.author?.username} (bot=${isBot}, webhook=${isWebhook})`);
+      // Only process bot messages or webhook (APP) messages
+      if (!msg.author?.bot && !msg.webhook_id) continue;
 
       const parsed = parseMessage(msg, server.id);
-      if (!parsed) {
-        console.log(`  -> Parse falhou. content: ${msg.content?.slice(0, 80)}`);
-        continue;
-      }
-
-      console.log(`  -> Parse OK: ${parsed.name} | ${parsed.price} ${parsed.currency}`);
+      if (!parsed) continue;
 
       const { error } = await supabase.from('market_items').upsert({
         id: msg.id,
@@ -214,23 +216,23 @@ async function pollMessagesForServer(server: { id: string, channelId: string, na
         currency: parsed.currency,
         timestamp: msg.timestamp,
         icon_url: parsed.iconUrl || guessIconUrl(parsed.name),
-        server_id: server.id,
+        server_id: server.id
       }, { onConflict: 'id' });
 
       if (!error) {
-        console.log(`  ✅ Salvo: ${parsed.name} — ${parsed.price} ${parsed.currency}`);
+        console.log(`📦 Market item [${server.name}]: ${parsed.name} — ${parsed.price} ${parsed.currency}`);
         newCount++;
       } else if (error.code !== '23505') {
-        console.error('  Supabase error:', error.message);
+        console.error('Supabase error:', error.message);
       }
     }
 
     if (newCount > 0) {
-      console.log(`✅ [${server.name}] ${newCount} novo(s) item(ns) capturado(s)!`);
+      console.log(`✅ L2 Poller: ${newCount} new item(s) captured from ${server.name}`);
     }
 
   } catch (err: any) {
-    console.error(`❌ Fetch error [${server.name}]:`, err.message);
+    console.error(`❌ L2 Poller fetch error on ${server.name}:`, err.message);
   }
 }
 
@@ -248,8 +250,8 @@ async function pollAll() {
 }
 
 export function startMarketPoller() {
-  if (!AUTH_HEADER) {
-    console.warn('⚠️  DISCORD_USER_TOKEN (ou DISCORD_BOT_TOKEN) não definido. Poller desativado.');
+  if (!USER_TOKEN) {
+    console.warn('⚠️  DISCORD_USER_TOKEN não definido. L2 Market Poller desativado.');
     return;
   }
 
@@ -259,13 +261,12 @@ export function startMarketPoller() {
   ].filter(Boolean);
 
   if (channels.length === 0) {
-    console.warn('⚠️  Nenhum channel ID configurado. Defina PRIDE_MARKET_CHANNEL_ID no Railway.');
+    console.warn('⚠️  Nenhum canal configurado. Defina PRIDE_MARKET_CHANNEL_ID no Railway.');
     return;
   }
 
   console.log(`🔄 L2 Market Poller ativo (a cada ${POLL_INTERVAL_MS / 1000}s) — Monitorando: ${channels.join(' & ')}`);
 
-  // Primeira poll imediata, depois a cada 5s
   pollAll();
   setInterval(pollAll, POLL_INTERVAL_MS);
 }
