@@ -41,11 +41,20 @@ function parseMessage(msg: any, serverId: string): { name: string; price: number
   // Helper para converter string de preco dependendo do servidor
   const parsePriceStr = (valStr: string, sId: string) => {
     // ZGaming: "15,000" significa 15000 zCoin
-    // Pride: "5.555" significa 5 moedas e 555 centavos
+    // Pride: "10.000" significa 10.000 (10) Pride Coin
     if (sId === 'pride') {
-      // Pride usa ponto ou virgula como decimal (5.555 ou 5,555). 
-      // Substituimos virgula por ponto e parseFloat
-      return parseFloat(valStr.replace(/,/g, '.'));
+      // Pride sempre tem 3 casas decimais pós ponto ou virgula.
+      // Substituimos virgula por ponto
+      const normalized = valStr.replace(/,/g, '.');
+      // Se tiver mais de um ponto (ex: 1.000.000), mantemos a logica americana base (remove os de milhar, deixa o ultimo descimal se houver)
+      // Como o Pride manda "Price: 0,234" ou "10,000", convertendo pra float teremos 0.234 e 10.
+      const parts = normalized.split('.');
+      if (parts.length > 2) {
+        // Numero tipo 1.250.000 - junta tudo e divide por 1000
+        const rawNum = parseInt(normalized.replace(/\./g, ''));
+        return rawNum / 1000;
+      }
+      return parseFloat(normalized);
     } else {
       // ZGaming remove todas as virgulas de milhares
       return parseFloat(valStr.replace(/,/g, ''));
