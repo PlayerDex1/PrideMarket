@@ -1,25 +1,20 @@
 import 'dotenv/config';
+import { Client, GatewayIntentBits, Message, Events } from 'discord.js';
 import { createClient } from '@supabase/supabase-js';
-import { sendDiscordDM } from './discordNotifier';
 import { SERVERS } from '../config/servers';
 
-const USER_TOKEN = process.env.DISCORD_USER_TOKEN;
-const BOT_TOKEN = process.env.DISCORD_BOT_TOKEN || process.env.DISCORD_TOKEN;
+const DISCORD_BOT_TOKEN = process.env.DISCORD_BOT_TOKEN || process.env.DISCORD_TOKEN || '';
+const PRIDE_CHANNEL_ID = process.env.PRIDE_MARKET_CHANNEL_ID || '';
+const ZGAMING_CHANNEL_ID = process.env.ZGAMING_MARKET_CHANNEL_ID || '';
 
-let AUTH_HEADER = '';
-if (USER_TOKEN) {
-  AUTH_HEADER = USER_TOKEN; // Explicitly no "Bot " prefix for Self-Bots
-} else if (BOT_TOKEN) {
-  AUTH_HEADER = BOT_TOKEN.startsWith('Bot ') ? BOT_TOKEN : `Bot ${BOT_TOKEN}`;
-}
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL || 'https://mgylypvmgjebvpxhlmly.supabase.co';
 const SUPABASE_KEY = process.env.VITE_SUPABASE_ANON_KEY || 'sb_publishable_RG-4on-iquEBjcvHD-ZAMw_SqZTkHTS';
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
-const POLL_INTERVAL_MS = 5000; // 5 seconds
-
-// Armazena o state do ultimo ID lido por servidor { 'zgaming': '123..', 'pride': '456..' }
-let lastMessageIds: Record<string, string | null> = {};
+// Map channel ID → server ID for routing
+const channelServerMap: Record<string, string> = {};
+if (PRIDE_CHANNEL_ID) channelServerMap[PRIDE_CHANNEL_ID] = 'pride';
+if (ZGAMING_CHANNEL_ID) channelServerMap[ZGAMING_CHANNEL_ID] = 'zgaming';
 
 function guessIconUrl(itemName: string): string {
   const name = itemName.toLowerCase();
@@ -34,7 +29,6 @@ function guessIconUrl(itemName: string): string {
   return 'https://l2db.info/icon/weapon_the_sword_of_hero_i00.png';
 }
 
-// Remove Discord custom emojis like <:zcoin:1234> or <zcoin1234>
 function cleanEmojis(text: string): string {
   return text
     .replace(/<:[^:]+:\d+>/g, '')
@@ -43,91 +37,75 @@ function cleanEmojis(text: string): string {
     .trim();
 }
 
-// Parse price and name from Discord message (embed or plain text)
-function parseMessage(msg: any, serverId: string): { name: string; price: number; currency: string; iconUrl?: string } | null {
-  // Helper para converter string de preco dependendo do servidor
-  const parsePriceStr = (valStr: string, sId: string) => {
-    // ZGaming: "15,000" significa 15000 zCoin
-    // Pride: "10.000" significa 10.000 (10) Pride Coin
-    if (sId === 'pride') {
-      // Pride sempre tem 3 casas decimais pós ponto ou virgula.
-      // Substituimos virgula por ponto
-      const normalized = valStr.replace(/,/g, '.');
-      // Se tiver mais de um ponto (ex: 1.000.000), mantemos a logica americana base (remove os de milhar, deixa o ultimo descimal se houver)
-      // Como o Pride manda "Price: 0,234" ou "10,000", convertendo pra float teremos 0.234 e 10.
-      const parts = normalized.split('.');
-      if (parts.length > 2) {
-        // Numero tipo 1.250.000 - junta tudo e divide por 1000
-        const rawNum = parseInt(normalized.replace(/\./g, ''));
-        return rawNum / 1000;
-      }
-      return parseFloat(normalized);
-    } else {
-      // ZGaming remove todas as virgulas de milhares
-      return parseFloat(valStr.replace(/,/g, ''));
+function parsePriceStr(valStr: string, serverId: string): number {
+  if (serverId === 'pride') {
+    // Pride: "10.000" = 10 PrideCoins (3 decimal places standard)
+    const normalized = valStr.replace(/,/g, '.');
+    const parts = normalized.split('.');
+    if (parts.length > 2) {
+      // Multiple dots like 1.000.000 → integer then /1000
+      const rawNum = parseInt(normalized.replace(/\./g, ''));
+      return rawNum / 1000;
     }
-  };
+    return parseFloat(normalized);
+  } else {
+    // ZGaming: "15,000" = 15000 zCoin
+    return parseFloat(valStr.replace(/,/g, ''));
+  }
+}
 
-  if (msg.embeds && msg.embeds.length > 0) {
-    const embed = msg.embeds[0];
+function parseMessage(msg: Message, serverId: string): { name: string; price: number; currency: string; iconUrl?: string } | null {
+  const embed = msg.embeds[0];
 
-    // Log embed structure
-    console.log('[ZGaming Embed]', JSON.stringify({
-      author: embed.author,
+  if (embed) {
+    console.log(`[${serverId.toUpperCase()} Embed]`, JSON.stringify({
+      author: embed.author?.name,
       title: embed.title,
-      description: embed.description?.slice(0, 150),
-      thumbnail: embed.thumbnail,
-      image: embed.image,
+      description: embed.description?.slice(0, 200),
       fields: embed.fields,
+      thumbnail: embed.thumbnail?.url,
     }, null, 2));
 
-    // 1. Item name: author.name > title > field > description
+    // Item name
     let itemName = '';
     if (embed.author?.name) {
-      // Remove common ZGaming suffix
       itemName = cleanEmojis(embed.author.name)
-        .replace(/\s*was added on the market\.?\s*/gi, '')
-        .trim();
+        .replace(/\s*was added on the market\.?\s*/gi, '').trim();
     } else if (embed.title) {
-      // Remove common Pride suffix
       itemName = cleanEmojis(embed.title)
-        .replace(/\s*was added on the market\.?\s*/gi, '')
-        .trim();
+        .replace(/\s*was added on the market\.?\s*/gi, '').trim();
     }
 
-    // 2. Item name from specific field
-    if (!itemName && embed.fields) {
-      const itemField = embed.fields.find((f: any) =>
-        /^(item|name|nome|produto|listing)$/i.test(f.name.trim())
-      );
+    if (!itemName && embed.fields?.length) {
+      const itemField = embed.fields.find(f => /^(item|name|nome|produto|listing)$/i.test(f.name.trim()));
       if (itemField) itemName = cleanEmojis(itemField.value);
     }
 
-    // 3. Item name from first line of description
     if (!itemName && embed.description) {
       itemName = cleanEmojis(embed.description.split('\n')[0])
-        .replace(/\s*was added on the market\.?\s*/gi, '')
-        .trim();
+        .replace(/\s*was added on the market\.?\s*/gi, '').trim();
     }
 
-    // 4. Price from "Price" field
+    // Price
     let price = 0;
-    let currency = 'zCoin';
-    if (embed.fields) {
-      const priceField = embed.fields.find((f: any) =>
-        /price|preco|valor|cost|amount/i.test(f.name)
-      );
+    let currency = serverId === 'pride' ? 'Pride Coin' : 'zCoin';
+
+    // From explicit Price field
+    if (embed.fields?.length) {
+      const priceField = embed.fields.find(f => /price|preco|valor|cost|amount/i.test(f.name));
       if (priceField) {
         const cleanVal = cleanEmojis(priceField.value);
         const pm = cleanVal.match(/(\d+(?:[,.]\d+)*)/);
         if (pm) {
           price = parsePriceStr(pm[1], serverId);
-          currency = priceField.value.toLowerCase().includes('adena') ? 'Adena' : 'zCoin';
+          if (priceField.value.toLowerCase().includes('adena')) currency = 'Adena';
+          else if (priceField.value.toLowerCase().includes('pride')) currency = 'Pride Coin';
+          else if (priceField.value.toLowerCase().includes('zcoin')) currency = 'zCoin';
         }
       }
     }
 
-    // 5. Price from description text (Pride Format)
+    // From description: "Price: 999.999 Pride Coin"
     if (!price && embed.description) {
       const descMatch = cleanEmojis(embed.description).match(/Price:\s*(\d+(?:[,.]\d+)*)\s*(Pride Coin|zCoin|Adena)/i);
       if (descMatch) {
@@ -136,21 +114,19 @@ function parseMessage(msg: any, serverId: string): { name: string; price: number
       }
     }
 
-    // 6. Price from full text fallback
+    // Full text fallback
     if (!price) {
       const fullText = cleanEmojis([
         embed.title || '',
         embed.description || '',
-        ...(embed.fields || []).map((f: any) => `${f.name} ${f.value}`)
+        ...(embed.fields || []).map(f => `${f.name} ${f.value}`)
       ].join(' '));
       const pm = fullText.match(/(\d+(?:[,.]\d+)*)/g);
       if (pm) price = parsePriceStr(pm[pm.length - 1], serverId);
     }
 
     if (itemName && price > 0) {
-      // Extract real icon from embed thumbnail or image
-      const iconUrl = embed.thumbnail?.url || embed.thumbnail?.proxy_url
-        || embed.image?.url || embed.author?.icon_url || undefined;
+      const iconUrl = embed.thumbnail?.url || embed.image?.url || embed.author?.iconURL || undefined;
       return { name: itemName, price, currency, iconUrl };
     }
   }
@@ -163,203 +139,82 @@ function parseMessage(msg: any, serverId: string): { name: string; price: number
       return {
         name: match[1].trim(),
         price: parsePriceStr(match[2], serverId),
-        currency: match[3].toLowerCase() === 'adena' ? 'Adena' : (match[3].toLowerCase().includes('pride') ? 'Pride Coin' : 'zCoin'),
+        currency: match[3].toLowerCase().includes('pride') ? 'Pride Coin' : match[3].toLowerCase() === 'adena' ? 'Adena' : 'zCoin',
       };
-    }
-    const pm = text.match(/(\d+(?:[,.]\d+)*)\s*(zcoin|adena|zc|pride|pride coin)/i);
-    if (pm) {
-      const namePart = cleanEmojis(text.split(pm[0])[0]).replace(/[-:,]$/, '').trim();
-      if (namePart) {
-        return {
-          name: namePart,
-          price: parsePriceStr(pm[1], serverId),
-          currency: pm[2].toLowerCase() === 'adena' ? 'Adena' : (pm[2].toLowerCase().includes('pride') ? 'Pride Coin' : 'zCoin'),
-        };
-      }
     }
   }
 
   return null;
 }
 
-export async function sendDiscordNotification(serverId: string, name: string, price: number, currency: string, timestamp: string, iconUrl?: string) {
-  try {
-    const { data: alerts } = await supabase.from('user_alerts').select('*').eq('server_id', serverId);
-    if (!alerts || alerts.length === 0) return;
+async function processMarketMessage(msg: Message, serverId: string) {
+  // We accept both real bots AND webhook integrations (APP type)
+  const isBot = msg.author.bot;
+  const isWebhook = !!msg.webhookId;
+  if (!isBot && !isWebhook) return;
 
-    for (const alert of alerts) {
-      let matched = false;
+  console.log(`[${serverId.toUpperCase()}] Nova mensagem de: ${msg.author.username} (bot=${isBot}, webhook=${isWebhook})`);
 
-      if (name.toLowerCase().includes(alert.keyword.toLowerCase())) {
-        const maxPrice = alert.max_price;
-        const minEnhancement = alert.min_enhancement;
-        let priceOk = true;
-        let enhanceOk = true;
-
-        if (maxPrice && price > maxPrice) priceOk = false;
-        if (minEnhancement) {
-          const m = name.match(/\+(\d+)/);
-          if ((m ? parseInt(m[1]) : 0) < minEnhancement) enhanceOk = false;
-        }
-
-        matched = priceOk && enhanceOk;
-      }
-
-      if (matched && alert.discord_id) {
-        const serverTag = serverId.toUpperCase();
-        const urlName = encodeURIComponent(name);
-        const message = `🔔 **L2 MARKET MATCH [${serverTag}]**\n\n` +
-          `📦 **${name}**\n` +
-          `💰 **${price.toLocaleString()} ${currency}**\n\n` +
-          `🔎 Motivo: Match no alerta "${alert.keyword}"\n` +
-          `Ver: https://gerencimanento-de-clan.vercel.app/item/${urlName}`;
-
-        await sendDiscordDM(alert.discord_id, message);
-      }
-    }
-  } catch (e) {
-    console.error('Erro ao processar notificações do Discord:', e);
+  const parsed = parseMessage(msg, serverId);
+  if (!parsed) {
+    console.log(`  -> parseMessage falhou. Conteúdo:`, msg.content.slice(0, 100));
+    return;
   }
-}
 
-async function pollMessagesForServer(server: { id: string, channelId: string, name: string }) {
-  if (!AUTH_HEADER) return;
+  console.log(`  -> Parse OK: ${parsed.name} | ${parsed.price} ${parsed.currency}`);
 
-  const lastId = lastMessageIds[server.id];
-  const url = `https://discord.com/api/v10/channels/${server.channelId}/messages?limit=20${lastId ? `&after=${lastId}` : ''}`;
+  const { error } = await supabase.from('market_items').upsert({
+    id: msg.id,
+    name: parsed.name,
+    price: parsed.price,
+    currency: parsed.currency,
+    timestamp: msg.createdAt.toISOString(),
+    icon_url: parsed.iconUrl || guessIconUrl(parsed.name),
+    server_id: serverId,
+  }, { onConflict: 'id' });
 
-  try {
-    const res = await fetch(url, {
-      headers: {
-        Authorization: AUTH_HEADER, // user token without Bot prefix
-        'Content-Type': 'application/json',
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) discord/1.0.9030 Chrome/120.0.6099.291 Electron/28.2.10 Safari/537.36'
-      },
-    });
-
-    if (!res.ok) {
-      if (res.status === 401) {
-        console.error('❌ L2 Poller: Invalid user token (401). Check DISCORD_USER_TOKEN in .env');
-      } else if (res.status === 403) {
-        console.error(`❌ L2 Poller: No access to channel (403). Cannot access ${server.name} channel.`);
-      } else {
-        console.error(`❌ L2 Poller: Discord API error ${res.status} on ${server.name}`);
-      }
-      return;
-    }
-
-    const messages: any[] = await res.json();
-
-    if (!Array.isArray(messages) || messages.length === 0) return;
-
-    // Discord returns newest first — reverse to process oldest first
-    const sorted = [...messages].reverse();
-
-    // Update lastMessageId to the newest message
-    lastMessageIds[server.id] = messages[0].id;
-
-    let newCount = 0;
-    for (const msg of sorted) {
-      if (server.id === 'pride') {
-        console.log(`[DEBUG PRIDE] Lendo msg ID: ${msg.id} de autor: ${msg.author?.username} (isBot: ${msg.author?.bot}, isWebhook: ${!!msg.webhook_id})`);
-      }
-
-      // Allow bot or webhook
-      if (!msg.author?.bot && !msg.webhook_id) {
-        if (server.id === 'pride') console.log(`  -> Ignorada: Nao eh bot nem webhook.`);
-        continue;
-      }
-
-      const parsed = parseMessage(msg, server.id);
-      if (!parsed) {
-        if (server.id === 'pride') {
-          console.log(`  -> falha no parseMessage! Dados Brutos:`, JSON.stringify({ content: msg.content, embeds: msg.embeds }, null, 2));
-        }
-        continue;
-      }
-
-      if (server.id === 'pride') {
-        console.log(`  -> Parse Sucesso! Item: ${parsed.name} | ${parsed.price} ${parsed.currency}`);
-      }
-
-      const item = {
-        name: parsed.name,
-        price: parsed.price,
-        currency: parsed.currency,
-        timestamp: msg.timestamp,
-        iconUrl: guessIconUrl(parsed.name),
-        messageId: msg.id,
-        server_id: server.id
-      };
-
-      try {
-        const { error } = await supabase.from('market_items').upsert({
-          id: msg.id,
-          name: parsed.name,
-          price: parsed.price,
-          currency: parsed.currency,
-          timestamp: msg.timestamp,
-          icon_url: parsed.iconUrl || guessIconUrl(parsed.name),
-          server_id: server.id
-        }, { onConflict: 'id' });
-
-        if (!error) {
-          console.log(`📦 Market item [${server.name}]: ${parsed.name} — ${parsed.price} ${parsed.currency}`);
-          newCount++;
-          // Discord notification
-          await sendDiscordNotification(server.id, parsed.name, parsed.price, parsed.currency, msg.timestamp, parsed.iconUrl);
-        } else if (error.code !== '23505') { // ignore duplicate key
-          console.error('Supabase error:', error.message);
-        }
-      } catch { }
-    }
-
-    if (newCount > 0) {
-      console.log(`✅ L2 Poller: ${newCount} new item(s) captured from ${server.name}`);
-    }
-
-  } catch (err: any) {
-    console.error(`❌ L2 Poller fetch error on ${server.name}:`, err.message);
-  }
-}
-
-async function pollAll() {
-  const activeBots = SERVERS.filter(s => {
-    if (s.id === 'zgaming') return !!process.env.ZGAMING_MARKET_CHANNEL_ID;
-    if (s.id === 'pride') return !!process.env.PRIDE_MARKET_CHANNEL_ID;
-    return false;
-  });
-
-  for (const bot of activeBots) {
-    const channelId = bot.id === 'zgaming' ? process.env.ZGAMING_MARKET_CHANNEL_ID : process.env.PRIDE_MARKET_CHANNEL_ID;
-    await pollMessagesForServer({ ...bot, channelId: channelId as string });
+  if (error && error.code !== '23505') {
+    console.error('  -> Supabase error:', error.message);
+  } else {
+    console.log(`  ✅ Item salvo no Supabase: ${parsed.name} — ${parsed.price} ${parsed.currency}`);
   }
 }
 
 export function startMarketPoller() {
-  if (!AUTH_HEADER) {
-    console.warn('⚠️  Nenhum TOKEN do Discord definido. L2 Market Poller desativado.');
+  if (!DISCORD_BOT_TOKEN) {
+    console.warn('⚠️  DISCORD_BOT_TOKEN não definido. Bot desativado.');
     return;
   }
 
-  const activeBots = SERVERS.filter(s => {
-    if (s.id === 'zgaming') return !!process.env.ZGAMING_MARKET_CHANNEL_ID;
-    if (s.id === 'pride') return !!process.env.PRIDE_MARKET_CHANNEL_ID;
-    return false;
+  if (!PRIDE_CHANNEL_ID && !ZGAMING_CHANNEL_ID) {
+    console.warn('⚠️  Nenhum channel ID configurado (PRIDE_MARKET_CHANNEL_ID, ZGAMING_MARKET_CHANNEL_ID). Bot desativado.');
+    return;
+  }
+
+  const client = new Client({
+    intents: [
+      GatewayIntentBits.Guilds,
+      GatewayIntentBits.GuildMessages,
+      GatewayIntentBits.MessageContent,
+    ],
   });
 
-  if (activeBots.length === 0) {
-    console.warn('⚠️  Nenhum Canal de Servidor configurado (ZGAMING_MARKET_CHANNEL_ID, etc). Poller desativado.');
-    return;
-  }
+  client.once(Events.ClientReady, (c) => {
+    console.log(`✅ Bot conectado como: ${c.user.tag}`);
+    console.log(`👀 Monitorando canais: ${Object.keys(channelServerMap).join(', ')}`);
+  });
 
-  const names = activeBots.map(s => s.name).join(' & ');
-  console.log(`🔄 L2 Market Poller ativo (a cada ${POLL_INTERVAL_MS / 1000}s) — Ouvindo: ${names}`);
+  client.on(Events.MessageCreate, async (message) => {
+    const serverId = channelServerMap[message.channelId];
+    if (!serverId) return; // mensagem de outro canal, ignora
 
-  // First poll immediately, then every 5s
-  pollAll();
-  setInterval(pollAll, POLL_INTERVAL_MS);
+    await processMarketMessage(message, serverId);
+  });
+
+  client.login(DISCORD_BOT_TOKEN).catch(err => {
+    console.error('❌ Discord bot login failed:', err.message);
+  });
 }
 
-// Auto-start when run directly (Railway/standalone)
+// Auto-start when run directly (Railway)
 startMarketPoller();
