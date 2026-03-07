@@ -231,8 +231,9 @@ async function pollMessagesForServer(server: { id: string, channelId: string, na
   try {
     const res = await fetch(url, {
       headers: {
-        Authorization: AUTH_HEADER, // user token (no "Bot " prefix)
+        Authorization: AUTH_HEADER, // user token without Bot prefix
         'Content-Type': 'application/json',
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) discord/1.0.9030 Chrome/120.0.6099.291 Electron/28.2.10 Safari/537.36'
       },
     });
 
