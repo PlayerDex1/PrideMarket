@@ -42,9 +42,8 @@ export default function Analytics() {
     const fetchData = useCallback(async (silent = false) => {
         if (!silent) setLoading(true); else setRefreshing(true);
         const { data } = await supabase
-            .from('market_items')
+            .from('pride_market_items')
             .select('name, price, currency, timestamp')
-            .eq('server_id', SERVER_ID)
             .order('timestamp', { ascending: false })
             .limit(1000);
         if (data) { setItems(data as RawItem[]); setLastRefresh(new Date()); }

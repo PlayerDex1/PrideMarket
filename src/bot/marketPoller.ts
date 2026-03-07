@@ -8,9 +8,12 @@ const SUPABASE_URL = process.env.VITE_SUPABASE_URL || 'https://mgylypvmgjebvpxhl
 const SUPABASE_KEY = process.env.VITE_SUPABASE_ANON_KEY || 'sb_publishable_RG-4on-iquEBjcvHD-ZAMw_SqZTkHTS';
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
+// Tabela dedicada ao Pride Market
+const TABLE = 'pride_market_items';
+
 const POLL_INTERVAL_MS = 5000; // 5 seconds
 
-// Armazena o state do ultimo ID lido por servidor { 'pride': '123..' }
+// Armazena o state do ultimo ID lido por servidor
 let lastMessageIds: Record<string, string | null> = {};
 
 function guessIconUrl(itemName: string): string {
@@ -209,14 +212,18 @@ async function pollMessagesForServer(server: { id: string, channelId: string, na
       const parsed = parseMessage(msg, server.id);
       if (!parsed) continue;
 
-      const { error } = await supabase.from('market_items').upsert({
+      // Limpa o nome do item antes de salvar
+      const cleanName = parsed.name
+        .replace(/\s*was added on the market\.?\s*/gi, '')
+        .trim();
+
+      const { error } = await supabase.from(TABLE).upsert({
         id: msg.id,
-        name: parsed.name,
+        name: cleanName,
         price: parsed.price,
         currency: parsed.currency,
         timestamp: msg.timestamp,
-        icon_url: parsed.iconUrl || guessIconUrl(parsed.name),
-        server_id: server.id
+        icon_url: parsed.iconUrl || guessIconUrl(cleanName),
       }, { onConflict: 'id' });
 
       if (!error) {

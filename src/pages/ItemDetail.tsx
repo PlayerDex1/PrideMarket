@@ -37,9 +37,8 @@ export default function ItemDetail() {
     const fetchHistory = useCallback(async () => {
         if (!name) return;
         const { data } = await supabase
-            .from('market_items')
+            .from('pride_market_items')
             .select('*')
-            .eq('server_id', SERVER_ID)
             .ilike('name', `%${name}%`)
             .order('timestamp', { ascending: true })
             .limit(200);

@@ -40,9 +40,8 @@ export default function MarketHome() {
     const fetch = useCallback(async (silent = false) => {
         if (!silent) setLoading(true);
         const { data } = await supabase
-            .from('market_items')
+            .from('pride_market_items')
             .select('id, name, price, currency, timestamp, icon_url')
-            .eq('server_id', SERVER_ID)
             .order('timestamp', { ascending: false })
             .limit(500);
         if (data) {

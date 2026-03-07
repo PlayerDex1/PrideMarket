@@ -50,10 +50,9 @@ export default function CommandPalette({ open, onClose }: Props) {
         const t = setTimeout(async () => {
             setLoading(true);
             const { data } = await supabase
-                .from('market_items')
+                .from('pride_market_items')
                 .select('name, price, currency, timestamp')
                 .ilike('name', `%${query}%`)
-                .eq('server_id', 'pride')
                 .order('timestamp', { ascending: false })
                 .limit(10);
             if (data) {
