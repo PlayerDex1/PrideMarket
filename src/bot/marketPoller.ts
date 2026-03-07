@@ -3,14 +3,18 @@ import { createClient } from '@supabase/supabase-js';
 import { SERVERS } from '../config/servers';
 
 const USER_TOKEN = process.env.DISCORD_USER_TOKEN || '';
-const SUPABASE_URL = process.env.VITE_SUPABASE_URL || 'https://mgylypvmgjebvpxhlmly.supabase.co';
+const SUPABASE_URL = process.env.VITE_SUPABASE_URL || '';
 
-// Service Key bypassa RLS — use no Railway para INSERT funcionar
-// Fallback para anon key se não configurada
+// Service Key bypassa RLS — obrigatório para INSERT funcionar
 const SUPABASE_KEY =
   process.env.SUPABASE_SERVICE_KEY ||
   process.env.VITE_SUPABASE_ANON_KEY ||
-  'sb_publishable_RG-4on-iquEBjcvHD-ZAMw_SqZTkHTS';
+  '';
+
+if (!SUPABASE_URL || !SUPABASE_KEY) {
+  console.error('❌ SUPABASE_URL e SUPABASE_KEY são obrigatórios. Configure as variáveis de ambiente no Railway.');
+  process.exit(1);
+}
 
 if (process.env.SUPABASE_SERVICE_KEY) {
   console.log('🔑 Supabase: usando Service Key (RLS bypass ativo)');
