@@ -98,7 +98,9 @@ function parseMessage(msg: any, serverId: string): { name: string; price: number
 
     // 3. Item name from first line of description
     if (!itemName && embed.description) {
-      itemName = cleanEmojis(embed.description.split('\n')[0]);
+      itemName = cleanEmojis(embed.description.split('\n')[0])
+        .replace(/\s*was added on the market\.?\s*/gi, '')
+        .trim();
     }
 
     // 4. Price from "Price" field
@@ -250,11 +252,27 @@ async function pollMessagesForServer(server: { id: string, channelId: string, na
 
     let newCount = 0;
     for (const msg of sorted) {
-      // Only process bot messages (ZGaming bot)
-      if (!msg.author?.bot) continue;
+      if (server.id === 'pride') {
+        console.log(`[DEBUG PRIDE] Lendo msg ID: ${msg.id} de autor: ${msg.author?.username} (isBot: ${msg.author?.bot}, isWebhook: ${!!msg.webhook_id})`);
+      }
+
+      // Allow bot or webhook
+      if (!msg.author?.bot && !msg.webhook_id) {
+        if (server.id === 'pride') console.log(`  -> Ignorada: Nao eh bot nem webhook.`);
+        continue;
+      }
 
       const parsed = parseMessage(msg, server.id);
-      if (!parsed) continue;
+      if (!parsed) {
+        if (server.id === 'pride') {
+          console.log(`  -> falha no parseMessage! Dados Brutos:`, JSON.stringify({ content: msg.content, embeds: msg.embeds }, null, 2));
+        }
+        continue;
+      }
+
+      if (server.id === 'pride') {
+        console.log(`  -> Parse Sucesso! Item: ${parsed.name} | ${parsed.price} ${parsed.currency}`);
+      }
 
       const item = {
         name: parsed.name,
