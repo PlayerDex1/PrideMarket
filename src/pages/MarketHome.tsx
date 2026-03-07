@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Search, Clock, ArrowUpDown, Zap, TrendingUp, ChevronRight, Activity, Package, X } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { formatCurrency, formatCompactPrice } from '../lib/format';
+import { MARKET_TABLE } from '../config/tables';
 
 const SERVER_ID = 'pride';
 const POLL_INTERVAL = 5000;
@@ -54,7 +55,7 @@ export default function MarketHome() {
 
     const fetchItems = useCallback(async () => {
         const { data, error } = await supabase
-            .from('pride_market_items')
+            .from(MARKET_TABLE)
             .select('*')
             .order('timestamp', { ascending: false })
             .limit(200);

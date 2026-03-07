@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { BarChart2, TrendingUp, TrendingDown, Clock, Activity, Package, DollarSign, Layers, RefreshCw } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, AreaChart, Area } from 'recharts';
 import { supabase } from '../lib/supabase';
+import { MARKET_TABLE } from '../config/tables';
 import { formatCurrency } from '../lib/format';
 
 const SERVER_ID = 'pride';
@@ -53,7 +54,7 @@ export default function Analytics() {
         fromDate.setDate(fromDate.getDate() - days);
 
         const { data } = await supabase
-            .from('pride_market_items')
+            .from(MARKET_TABLE)
             .select('id, name, price, currency, timestamp')
             .gte('timestamp', fromDate.toISOString())
             .order('timestamp', { ascending: false })

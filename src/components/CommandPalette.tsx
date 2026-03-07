@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Search, Clock, X, TrendingUp, Package } from 'lucide-react';
 import { supabase } from '../lib/supabase';
+import { MARKET_TABLE } from '../config/tables';
 import { formatCurrency } from '../lib/format';
 
 interface Result {
@@ -47,7 +48,7 @@ export default function CommandPalette({ open, onClose }: CommandPaletteProps) {
         const timeout = setTimeout(async () => {
             setLoading(true);
             const { data } = await supabase
-                .from('pride_market_items')
+                .from(MARKET_TABLE)
                 .select('name, price, currency, timestamp')
                 .ilike('name', `%${query}%`)
                 .order('timestamp', { ascending: false })

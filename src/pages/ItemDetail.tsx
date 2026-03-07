@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Clock, TrendingDown, TrendingUp, BarChart2, Sword } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine } from 'recharts';
 import { supabase } from '../lib/supabase';
+import { MARKET_TABLE } from '../config/tables';
 import { formatCurrency } from '../lib/format';
 
 const CURRENCY = 'Pride Coin';
@@ -50,7 +51,7 @@ export default function ItemDetail() {
     const fetchHistory = useCallback(async () => {
         if (!name) return;
         const { data } = await supabase
-            .from('pride_market_items')
+            .from(MARKET_TABLE)
             .select('*')
             .ilike('name', `%${name}%`)
             .order('timestamp', { ascending: true })
