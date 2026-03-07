@@ -3,7 +3,8 @@ import { createClient } from '@supabase/supabase-js';
 import { sendDiscordDM } from './discordNotifier';
 import { SERVERS } from '../config/servers';
 
-const USER_TOKEN = process.env.DISCORD_USER_TOKEN || '';
+const RAW_TOKEN = process.env.DISCORD_TOKEN || process.env.DISCORD_USER_TOKEN || process.env.DISCORD_BOT_TOKEN || '';
+const AUTH_HEADER = RAW_TOKEN.startsWith('Bot ') ? RAW_TOKEN : (process.env.DISCORD_TOKEN ? `Bot ${RAW_TOKEN}` : RAW_TOKEN);
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL || 'https://mgylypvmgjebvpxhlmly.supabase.co';
 const SUPABASE_KEY = process.env.VITE_SUPABASE_ANON_KEY || 'sb_publishable_RG-4on-iquEBjcvHD-ZAMw_SqZTkHTS';
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -204,7 +205,7 @@ export async function sendDiscordNotification(serverId: string, name: string, pr
 }
 
 async function pollMessagesForServer(server: { id: string, channelId: string, name: string }) {
-  if (!USER_TOKEN) return;
+  if (!AUTH_HEADER) return;
 
   const lastId = lastMessageIds[server.id];
   const url = `https://discord.com/api/v10/channels/${server.channelId}/messages?limit=20${lastId ? `&after=${lastId}` : ''}`;
@@ -212,7 +213,7 @@ async function pollMessagesForServer(server: { id: string, channelId: string, na
   try {
     const res = await fetch(url, {
       headers: {
-        Authorization: USER_TOKEN, // user token (no "Bot " prefix)
+        Authorization: AUTH_HEADER, // user token (no "Bot " prefix)
         'Content-Type': 'application/json',
       },
     });
@@ -301,8 +302,8 @@ async function pollAll() {
 }
 
 export function startMarketPoller() {
-  if (!USER_TOKEN) {
-    console.warn('⚠️  DISCORD_USER_TOKEN não definido. L2 Market Poller desativado.');
+  if (!RAW_TOKEN) {
+    console.warn('⚠️  Nenhum TOKEN do Discord definido. L2 Market Poller desativado.');
     return;
   }
 
