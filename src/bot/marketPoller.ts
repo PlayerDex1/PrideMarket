@@ -3,8 +3,15 @@ import { createClient } from '@supabase/supabase-js';
 import { sendDiscordDM } from './discordNotifier';
 import { SERVERS } from '../config/servers';
 
-const RAW_TOKEN = process.env.DISCORD_TOKEN || process.env.DISCORD_USER_TOKEN || process.env.DISCORD_BOT_TOKEN || '';
-const AUTH_HEADER = RAW_TOKEN.startsWith('Bot ') ? RAW_TOKEN : (process.env.DISCORD_TOKEN ? `Bot ${RAW_TOKEN}` : RAW_TOKEN);
+const USER_TOKEN = process.env.DISCORD_USER_TOKEN;
+const BOT_TOKEN = process.env.DISCORD_BOT_TOKEN || process.env.DISCORD_TOKEN;
+
+let AUTH_HEADER = '';
+if (USER_TOKEN) {
+  AUTH_HEADER = USER_TOKEN; // Explicitly no "Bot " prefix for Self-Bots
+} else if (BOT_TOKEN) {
+  AUTH_HEADER = BOT_TOKEN.startsWith('Bot ') ? BOT_TOKEN : `Bot ${BOT_TOKEN}`;
+}
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL || 'https://mgylypvmgjebvpxhlmly.supabase.co';
 const SUPABASE_KEY = process.env.VITE_SUPABASE_ANON_KEY || 'sb_publishable_RG-4on-iquEBjcvHD-ZAMw_SqZTkHTS';
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -329,7 +336,7 @@ async function pollAll() {
 }
 
 export function startMarketPoller() {
-  if (!RAW_TOKEN) {
+  if (!AUTH_HEADER) {
     console.warn('⚠️  Nenhum TOKEN do Discord definido. L2 Market Poller desativado.');
     return;
   }
