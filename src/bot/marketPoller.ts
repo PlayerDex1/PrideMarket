@@ -2,10 +2,22 @@ import 'dotenv/config';
 import { createClient } from '@supabase/supabase-js';
 import { SERVERS } from '../config/servers';
 
-// EXACTLY as in the original L2MarketTracker - user token, no "Bot " prefix
 const USER_TOKEN = process.env.DISCORD_USER_TOKEN || '';
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL || 'https://mgylypvmgjebvpxhlmly.supabase.co';
-const SUPABASE_KEY = process.env.VITE_SUPABASE_ANON_KEY || 'sb_publishable_RG-4on-iquEBjcvHD-ZAMw_SqZTkHTS';
+
+// Service Key bypassa RLS — use no Railway para INSERT funcionar
+// Fallback para anon key se não configurada
+const SUPABASE_KEY =
+  process.env.SUPABASE_SERVICE_KEY ||
+  process.env.VITE_SUPABASE_ANON_KEY ||
+  'sb_publishable_RG-4on-iquEBjcvHD-ZAMw_SqZTkHTS';
+
+if (process.env.SUPABASE_SERVICE_KEY) {
+  console.log('🔑 Supabase: usando Service Key (RLS bypass ativo)');
+} else {
+  console.log('⚠️  Supabase: usando Anon Key — configure SUPABASE_SERVICE_KEY no Railway');
+}
+
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
 // Tabela dedicada ao Pride Market
