@@ -4,6 +4,7 @@ import Layout from './components/Layout';
 import MarketHome from './pages/MarketHome';
 import ItemDetail from './pages/ItemDetail';
 import Analytics from './pages/Analytics';
+import Watchlist from './pages/Watchlist';
 
 export default function App() {
     return (
@@ -14,6 +15,7 @@ export default function App() {
                         <Route index element={<MarketHome />} />
                         <Route path="item/:name" element={<ItemDetail />} />
                         <Route path="analytics" element={<Analytics />} />
+                        <Route path="watchlist" element={<Watchlist />} />
                     </Route>
                     <Route path="*" element={<Navigate to="/" replace />} />
                 </Routes>

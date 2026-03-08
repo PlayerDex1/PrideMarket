@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, Clock, ArrowUpDown, Zap, TrendingUp, ChevronRight, Activity, Package, X } from 'lucide-react';
+import { Search, Clock, ArrowUpDown, Zap, TrendingUp, ChevronRight, Activity, Package, X, Bell } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { formatCurrency, formatCompactPrice } from '../lib/format';
 import { MARKET_TABLE } from '../config/tables';
+import WatchModal from '../components/WatchModal';
 
 const SERVER_ID = 'pride';
 const POLL_INTERVAL = 5000;
@@ -50,6 +51,7 @@ export default function MarketHome() {
     const [search, setSearch] = useState('');
     const [currencyFilter, setCurrencyFilter] = useState('all');
     const [sortConfig, setSortConfig] = useState({ key: 'timestamp', direction: 'desc' });
+    const [watchingItem, setWatchingItem] = useState<string | null>(null);
     const iconCache = useRef<Record<string, string>>({});
     const searchRef = useRef<HTMLInputElement>(null);
 
@@ -332,6 +334,15 @@ export default function MarketHome() {
                                                 {formatTime(item.timestamp)}
                                             </div>
                                         </td>
+                                        <td style={{ padding: '10px 8px', textAlign: 'right' }}>
+                                            <button
+                                                className="btn-watch"
+                                                onClick={e => { e.stopPropagation(); setWatchingItem(item.name); }}
+                                                title="Adicionar à watchlist"
+                                            >
+                                                <Bell size={12} />
+                                            </button>
+                                        </td>
                                     </tr>
                                 ))}
                             </tbody>
@@ -428,6 +439,10 @@ export default function MarketHome() {
                     }
                 }
             `}</style>
-        </div>
+
+            {watchingItem && (
+                <WatchModal itemName={watchingItem} onClose={() => setWatchingItem(null)} />
+            )}
+        </div >
     );
 }

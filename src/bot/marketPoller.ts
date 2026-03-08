@@ -1,6 +1,8 @@
 import 'dotenv/config';
 import { createClient } from '@supabase/supabase-js';
 import { SERVERS } from '../config/servers';
+import { bot } from './telegramBot';
+import { runAlertChecker } from './alertChecker';
 
 const USER_TOKEN = process.env.DISCORD_USER_TOKEN || '';
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL || '';
@@ -292,6 +294,14 @@ export function startMarketPoller() {
 
   pollAll();
   setInterval(pollAll, POLL_INTERVAL_MS);
+}
+
+// Inicia o bot Telegram e alertChecker (se token configurado)
+if (process.env.TELEGRAM_BOT_TOKEN) {
+  runAlertChecker(bot).catch(console.error);
+  console.log('🤖 Telegram Bot + AlertChecker ativos');
+} else {
+  console.log('⚠️  TELEGRAM_BOT_TOKEN não configurado — alertas Telegram desativados');
 }
 
 // Auto-start no Railway

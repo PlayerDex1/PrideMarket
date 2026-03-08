@@ -1,11 +1,12 @@
 import { Link, Outlet, useLocation } from 'react-router-dom';
 import { useState, useEffect } from 'react';
-import { TrendingUp, LineChart, Search, Sword, Activity, X, Menu } from 'lucide-react';
+import { TrendingUp, LineChart, Search, Sword, Activity, X, Menu, Bell } from 'lucide-react';
 import CommandPalette from './CommandPalette';
 
 const NAV = [
     { name: 'Mercado', href: '/', icon: TrendingUp, desc: 'Feed ao vivo' },
     { name: 'Analytics', href: '/analytics', icon: LineChart, desc: 'Métricas e gráficos' },
+    { name: 'Watchlist', href: '/watchlist', icon: Bell, desc: 'Alertas de preço' },
 ];
 
 export default function Layout() {
