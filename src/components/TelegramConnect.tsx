@@ -7,28 +7,38 @@ interface Props {
 }
 
 export default function TelegramConnect({ onConnected }: Props) {
-    const [status, setStatus] = useState<'idle' | 'waiting' | 'connected'>('idle');
+    const [status, setStatus] = useState<'idle' | 'waiting' | 'connected' | 'timeout'>('idle');
     const [token, setToken] = useState('');
     const BOT_USERNAME = import.meta.env.VITE_TELEGRAM_BOT_USERNAME || 'pridemarketbot';
     const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+    const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+    const stopPolling = () => {
+        if (pollRef.current) clearInterval(pollRef.current);
+        if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    };
 
     const handleConnect = async () => {
-        // Gera token único
         const newToken = crypto.randomUUID();
         setToken(newToken);
         setStatus('waiting');
 
-        // Salva sessão no Supabase
-        await supabase.from('telegram_sessions').insert({
+        const { error } = await supabase.from('telegram_sessions').insert({
             token: newToken,
             created_at: new Date().toISOString(),
             expires_at: new Date(Date.now() + 10 * 60 * 1000).toISOString(),
         });
 
-        // Abre o bot no Telegram
+        if (error) console.error('Erro ao criar sessão Telegram:', error);
+
         window.open(`https://t.me/${BOT_USERNAME}?start=${newToken}`, '_blank');
 
-        // Polling para detectar vínculo
+        // Para automaticamente após 3 minutos
+        timeoutRef.current = setTimeout(() => {
+            stopPolling();
+            setStatus('timeout');
+        }, 3 * 60 * 1000);
+
         pollRef.current = setInterval(async () => {
             const { data } = await supabase
                 .from('telegram_sessions')
@@ -38,7 +48,7 @@ export default function TelegramConnect({ onConnected }: Props) {
                 .single();
 
             if (data?.chat_id) {
-                clearInterval(pollRef.current!);
+                stopPolling();
                 setStatus('connected');
                 localStorage.setItem('tg_chat_id', data.chat_id);
                 localStorage.setItem('tg_username', data.username || data.first_name || '');
@@ -47,10 +57,8 @@ export default function TelegramConnect({ onConnected }: Props) {
         }, 3000);
     };
 
-    // Limpa o polling ao desmontar
-    useEffect(() => () => {
-        if (pollRef.current) clearInterval(pollRef.current);
-    }, []);
+    useEffect(() => () => stopPolling(), []);
+
 
     if (status === 'connected') {
         return (
@@ -71,6 +79,16 @@ export default function TelegramConnect({ onConnected }: Props) {
                     <button className="btn-telegram" onClick={handleConnect}>
                         <Send size={16} />
                         Conectar Telegram
+                    </button>
+                </>
+            ) : status === 'timeout' ? (
+                <>
+                    <p className="tg-desc" style={{ color: 'var(--accent)' }}>
+                        ⏱ Não foi possível conectar. Certifique-se de clicar em <strong>Start</strong> no bot do Telegram.
+                    </p>
+                    <button className="btn-telegram" onClick={handleConnect}>
+                        <Send size={16} />
+                        Tentar novamente
                     </button>
                 </>
             ) : (
