@@ -1,7 +1,7 @@
 import 'dotenv/config';
 import { createClient } from '@supabase/supabase-js';
 import { SERVERS } from '../config/servers';
-import { bot } from './telegramBot';
+import { initBot } from './telegramBot';
 import { runAlertChecker } from './alertChecker';
 
 const USER_TOKEN = process.env.DISCORD_USER_TOKEN || '';
@@ -297,8 +297,9 @@ export function startMarketPoller() {
 }
 
 // Inicia o bot Telegram e alertChecker (se token configurado)
-if (process.env.TELEGRAM_BOT_TOKEN) {
-  runAlertChecker(bot).catch(console.error);
+const tgBot = initBot();
+if (tgBot) {
+  runAlertChecker(tgBot).catch(console.error);
   console.log('🤖 Telegram Bot + AlertChecker ativos');
 } else {
   console.log('⚠️  TELEGRAM_BOT_TOKEN não configurado — alertas Telegram desativados');
