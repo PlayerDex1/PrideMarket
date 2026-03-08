@@ -9,7 +9,7 @@ interface Props {
 export default function TelegramConnect({ onConnected }: Props) {
     const [status, setStatus] = useState<'idle' | 'waiting' | 'connected'>('idle');
     const [token, setToken] = useState('');
-    const BOT_USERNAME = import.meta.env.VITE_TELEGRAM_BOT_USERNAME || 'PrideMarketBot';
+    const BOT_USERNAME = import.meta.env.VITE_TELEGRAM_BOT_USERNAME || 'pridemarketbot';
     const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
     const handleConnect = async () => {
